@@ -1,12 +1,16 @@
 import pygame
 import os
-from game.level import SPACE, GOALBOX, GOALPLAYER, BOX, GOAL, WALL, PLAYER, Pos, Tile
+from game.level import SPACE, GOALBOX, GOALPLAYER, BOX, GOAL, WALL, PLAYER, Pos, Tile, Level
 
 class Display:
-    def __init__(self):
-        self.screen = pygame.display.set_mode((800, 600))
+    def __init__(self, level: Level):
+        self.tile_size = 400 // max(level.scale)
+        self.scale = tuple(self.tile_size * length for length in level.scale)
+        print(self.scale)
+        self.screen = pygame.display.set_mode(self.scale)
         pygame.display.set_caption("Sokoban")
         self.assets_path = "assets"
+        
         self.images = {}
         self.load_images()
 
@@ -33,4 +37,7 @@ class Display:
             for x, tile in enumerate(row):
                 image = self.images.get(tile)
                 if image:
-                    self.screen.blit(image, (x * 64, y * 64))
+                    if image:
+                        # 调整图像大小以匹配格子的大小
+                        scaled_image = pygame.transform.scale(image, (self.tile_size, self.tile_size))
+                        self.screen.blit(scaled_image, (x * self.tile_size, y * self.tile_size))

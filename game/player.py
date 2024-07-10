@@ -26,7 +26,18 @@ class Player:
         else:
             self.level.set_tile(self.x, self.y, SPACE)
             
-    def towards
+    # def towards(self, dx:int, dy:int) -> None:
+    #     new_x = self.x + dx
+    #     new_y = self.y + dy
+    #     if not self.level.is_space(new_x, new_y):
+    #         assert False, "Cannot move to box"
+            
+    #     self.x = new_x
+    #     self.y = new_y
+    #     if self.level.is_goal(new_x, new_y):
+    #         self.level.set_tile(new_x, new_y, GOALPLAYER)
+    #     else:
+    #         self.level.set_tile(new_x, new_y, PLAYER)
 
     def move(self, dx: int, dy:int) -> bool:
         new_x = self.x + dx
