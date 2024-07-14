@@ -43,7 +43,7 @@ class Display:
                 print(f"Error loading image for {tile}")
                 self.images[tile] = None
 
-    def render(self, level):
+    def render(self, level: Level):
         """
         Renders the game level on the display.
 
