@@ -4,6 +4,12 @@ from game.level import SPACE, GOALBOX, GOALPLAYER, BOX, GOAL, WALL, PLAYER, Pos,
 
 class Display:
     def __init__(self, level: Level):
+        """
+        Initializes the Display object.
+
+        Args:
+            level (Level): The level object representing the game level.
+        """
         self.tile_size = 400 // max(level.scale)
         self.scale = tuple(self.tile_size * length for length in level.scale)
         print(self.scale)
@@ -15,6 +21,12 @@ class Display:
         self.load_images()
 
     def load_images(self):
+        """
+        Loads the images for each tile type.
+
+        Raises:
+            Exception: If there is an error loading an image.
+        """
         self.image_paths = {
             SPACE: os.path.join(self.assets_path, "images", "space.png"),
             GOALBOX: os.path.join(self.assets_path, "images", "goalbox.png"),
@@ -32,6 +44,12 @@ class Display:
                 self.images[tile] = None
 
     def render(self, level):
+        """
+        Renders the game level on the display.
+
+        Args:
+            level (Level): The level object representing the game level.
+        """
         self.screen.fill((0, 0, 0))
         for y, row in enumerate(level.tiles):
             for x, tile in enumerate(row):
