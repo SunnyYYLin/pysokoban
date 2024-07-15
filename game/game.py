@@ -1,36 +1,19 @@
 import pygame
-from game.level import Level
-from game.player import Player
+from game.problem import SokobanProblem
 from ui.display import Display
 from ui.input_handler import InputHandler
 import os
 
 class Game:
-    """
-    Represents the game logic and controls the game flow.
-
-    Attributes:
-        lvl_num (int): The current level number.
-        level (Level): The current level object.
-        player (Player): The player object.
-        display (Display): The display object.
-        input_handler (InputHandler): The input handler object.
-        running (bool): Flag indicating if the game is running.
-
-    Methods:
-        __init__(): Initializes the Game object.
-        load_level(lvl_num: int) -> bool: Loads the specified level.
-        run(): Runs the game loop.
-    """
 
     def __init__(self):
         """
         Initializes the Game object.
 
-        It sets the initial level number, loads the first level,
-        and initializes the player, display, and input handler objects.
+        It sets the initial level number, loads the first level, display, and input handler objects.
         """
         self.lvl_num = 1
+        self.input_handler = InputHandler()
         assert self.load_level(self.lvl_num), "Failed to load level"
         self.running = True
         
@@ -45,12 +28,12 @@ class Game:
             bool: True if the level is loaded successfully, False otherwise.
         """
         try:
-            self.level = Level(os.path.join("levels", f"level{lvl_num}.txt"))
+            self.problem = SokobanProblem(os.path.join("levels", f"level{lvl_num}.txt"))
         except:
             return False
-        self.player = Player(self.level)
-        self.display = Display(self.level)
-        self.input_handler = InputHandler(self.player)
+        self.map = self.problem.initial_state()
+        self.display = Display(self.map)
+        
         return True
 
     def run(self):
@@ -63,10 +46,12 @@ class Game:
         clock = pygame.time.Clock()
         while self.running:
             key = self.input_handler.handle_events()
-            self.player.update(key)
-            self.display.render(self.level)
+            if key:
+                print(key.name)
+                self.map = self.problem.result(self.map, key)
+            self.display.render(self.map)
             pygame.display.flip()
-            if self.level.is_terminal():
+            if self.problem.is_goal(self.map):
                 print(f"Level {self.lvl_num} Complete!")
                 self.lvl_num += 1
                 if not self.load_level(self.lvl_num):
