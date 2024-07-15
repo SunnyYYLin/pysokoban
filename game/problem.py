@@ -2,12 +2,14 @@ from game.map import Map
 from game.map import SPACE, GOALBOX, BOX, GOAL, GOALPLAYER, PLAYER
 import pygame
 from enum import Enum
-from sealgo.sealgo_pkg.Problem import SearchProblem
+from sealgo.sealgo_pkg.Problem import SearchProblem, State, Action
 from os import path
+from typing import TypeAlias
 
-DIRECTIONS = {pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1), pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0)}
+DIRECTIONS:dict[int,tuple[int,int]] = \
+    {pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1), pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0)}
 
-class Action(Enum):
+class SokobanAction(Enum):
     UP = pygame.K_UP
     DOWN = pygame.K_DOWN
     LEFT = pygame.K_LEFT
@@ -34,8 +36,8 @@ class SokobanProblem(SearchProblem):
 
     """
 
-    State = Map
-    Action = Action
+    State: TypeAlias = Map
+    Action = SokobanAction
     
     def __init__(self, level_file: str):
         """

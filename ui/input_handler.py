@@ -1,5 +1,5 @@
 import pygame
-from game.problem import Action
+from game.problem import SokobanAction
 
 class InputHandler:
     """
@@ -31,5 +31,5 @@ class InputHandler:
                 pygame.quit()
                 quit()
             if event.type == pygame.KEYDOWN:
-                return Action(event.key)
+                return SokobanAction(event.key)
         return None
