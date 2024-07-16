@@ -1,9 +1,12 @@
 import pygame
 from game.problem import SokobanProblem, SokobanAction
+from game.map import Map
 from ui.display import Display, Event, State
 from ui.input_handler import InputHandler
+from ai.ai import AI
 import os
 
+SOLUTION_DISPLAY_TIME = 5_000
 class Game:
 
     def __init__(self):
@@ -27,8 +30,10 @@ class Game:
         Returns:
             bool: True if the level is loaded successfully, False otherwise.
         """
+        levels_folder = "levels"
         try:
-            self.problem = SokobanProblem(os.path.join("levels", f"level{lvl_num}.txt"))
+            map = Map(os.path.join(levels_folder, f"level{lvl_num}.txt"))
+            self.problem = SokobanProblem(map)
         except:
             return False
         self.map = self.problem.initial_state()
@@ -66,7 +71,17 @@ class Game:
                     self.display.load_map(self.map, self.lvl_num)
                     self.display.state = State.GAMING
                 case Event.ASK_AI:
-                    pass
+                    problem = SokobanProblem(self.map)
+                    ai = AI(problem)
+                    solutions = ai.search()
+                    for solution in solutions:
+                        delay = SOLUTION_DISPLAY_TIME // len(solution)
+                        for n, action in enumerate(solution):
+                            print(f"AI{n+1}: {action.name}")
+                            self.map = self.problem.result(self.map, action)
+                            self.display.render()
+                            pygame.time.wait(delay)
+                    self.display.state = State.GAMING
                 case _:
                     raise ValueError("Invalid event")
             clock.tick(60)

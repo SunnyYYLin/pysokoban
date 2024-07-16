@@ -40,7 +40,7 @@ class SokobanProblem(SearchProblem):
     State: TypeAlias = Map
     Action = SokobanAction
     
-    def __init__(self, level_file: str):
+    def __init__(self, init_state: Map):
         """
         Initializes the SokobanProblem object with a level path.
 
@@ -48,7 +48,7 @@ class SokobanProblem(SearchProblem):
         - level_path: The path to the level file.
 
         """
-        self.level = Map(level_file)
+        self.level = init_state
         
     def initial_state(self) -> State:
         """
@@ -95,13 +95,13 @@ class SokobanProblem(SearchProblem):
         """
         match action:
             case self.Action.UP:
-                return map.p_move(0, -1)
-            case self.Action.DOWN:
-                return map.p_move(0, 1)
-            case self.Action.LEFT:
                 return map.p_move(-1, 0)
-            case self.Action.RIGHT:
+            case self.Action.DOWN:
                 return map.p_move(1, 0)
+            case self.Action.LEFT:
+                return map.p_move(0, -1)
+            case self.Action.RIGHT:
+                return map.p_move(0, 1)
             case _:
                 return map
         

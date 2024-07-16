@@ -1,5 +1,5 @@
-from os import path
 from typing import List
+import numpy as np
 
 WALL = 'W'
 BOX = 'B'
@@ -12,7 +12,7 @@ Pos = tuple[int, int]
 Tile = str
 
 class Map:
-    def __init__(self, level_file: str):
+    def __init__(self, level_file: str = ''):
         """
         Initializes a Map object. If the level file is provided, it loads the map from the file.
 
@@ -22,10 +22,10 @@ class Map:
         Returns:
             None
         """
-        self.tiles: List[List[Tile]] = []
         if level_file != '':
             self.scale: Pos = self._load(level_file)
             self.player_x, self.player_y = self.locate_player()
+
 
     def _load(self, level_file: str) -> Pos:
         """
@@ -37,10 +37,12 @@ class Map:
         Returns:
             Pos: The dimensions of the level (width, height).
         """
+        tiles = []
         with open(level_file, 'r') as file:
             for line in file:
-                self.tiles.append(list(line.strip()))
-        return len(max(self.tiles, key=len)), len(self.tiles)
+                tiles.append(list(line.strip()))
+        self.tiles = np.array(tiles)
+        return tuple(self.tiles.shape)
                 
     def locate_player(self) -> Pos:
         """
@@ -49,11 +51,9 @@ class Map:
         Returns:
             Pos|None: The position of the player, or None if not found.
         """
-        for x in range(self.scale[0]):
-            for y in range(self.scale[1]):
-                if self.is_player(x, y):
-                    return x, y
-        assert False, 'Player not found'
+        player_pos = tuple(np.where(self.tiles == PLAYER))
+        assert len(player_pos[0]) == 1, "There should be only one player in the map."
+        return player_pos[0][0], player_pos[1][0]
 
     def get_tile(self, x:int , y: int) -> Tile:
         """
@@ -66,7 +66,7 @@ class Map:
         Returns:
             Tile: The tile at the specified position.
         """
-        return self.tiles[y][x]
+        return self.tiles[x][y]
 
     def set_tile(self, x: int, y: int, tile: Tile) -> None:
         """
@@ -80,7 +80,7 @@ class Map:
         Returns:
             None
         """
-        self.tiles[y][x] = tile
+        self.tiles[x][y] = tile
 
     def is_wall(self, x: int, y: int) -> bool:
         """
@@ -93,7 +93,7 @@ class Map:
         Returns:
             bool: True if the tile is a wall, False otherwise.
         """
-        return self.tiles[y][x] == WALL
+        return self.tiles[x][y] == WALL
 
     def is_box(self, x: int, y: int) -> bool:
         """
@@ -106,7 +106,7 @@ class Map:
         Returns:
             bool: True if the tile is a box(BOX/GOALBOX), False otherwise.
         """
-        return self.tiles[y][x] == BOX or self.tiles[y][x] == GOALBOX
+        return self.tiles[x][y] == BOX or self.tiles[x][y] == GOALBOX
 
     def is_goal(self, x: int, y: int) -> bool:
         """
@@ -119,7 +119,7 @@ class Map:
         Returns:
             bool: True if the tile is a goal(GOAL/GOALBOX/GOALPLAYER), False otherwise.
         """
-        return self.tiles[y][x] == GOAL or self.tiles[y][x] == GOALBOX or self.tiles[y][x] == GOALPLAYER
+        return self.tiles[x][y] == GOAL or self.tiles[x][y] == GOALBOX or self.tiles[x][y] == GOALPLAYER
     
     def is_space(self, x: int, y: int) -> bool:
         """
@@ -132,7 +132,7 @@ class Map:
         Returns:
             bool: True if the tile is a space(SPACE/GOAL), False otherwise.
         """
-        return self.tiles[y][x] == SPACE or self.tiles[y][x] == GOAL
+        return self.tiles[x][y] == SPACE or self.tiles[x][y] == GOAL
     
     def is_player(self, x: int, y: int) -> bool:
         """
@@ -145,7 +145,7 @@ class Map:
         Returns:
             bool: True if the tile is the player(PLAYER/GOALPLAYER), False otherwise.
         """
-        return self.tiles[y][x] == PLAYER or self.tiles[y][x] == GOALPLAYER
+        return self.tiles[x][y] == PLAYER or self.tiles[x][y] == GOALPLAYER
     
     def is_all_boxes_in_place(self) -> bool:
             """
@@ -166,7 +166,7 @@ class Map:
         Returns:
             Map: The copied map.
         """
-        new_map = Map('')
+        new_map = Map()
         new_map.tiles = [row.copy() for row in self.tiles]
         new_map.scale = self.scale
         new_map.player_x, new_map.player_y = self.player_x, self.player_y
