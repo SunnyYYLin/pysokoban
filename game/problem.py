@@ -14,6 +14,7 @@ class SokobanAction(Enum):
     DOWN = pygame.K_DOWN
     LEFT = pygame.K_LEFT
     RIGHT = pygame.K_RIGHT
+    PAUSE = pygame.K_ESCAPE
 
 class SokobanProblem(SearchProblem):
     """

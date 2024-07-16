@@ -3,16 +3,23 @@ import os
 from game.map import SPACE, GOALBOX, GOALPLAYER, BOX, GOAL, WALL, PLAYER, Map
 from enum import Enum, auto
 
-class Mode(Enum):
-    """
-    Represents the game modes.
+pygame.init()
+TITLE_FONT = pygame.font.Font(None, 96)
+BUTTON_FONT = pygame.font.Font(None, 48)
 
-    Attributes:
-        HUMAN: The human player mode.
-        AI: The AI player mode.
-    """
-    HUMAN = auto()
-    AI = auto()
+class Event(Enum):
+    START = auto()
+    CONTINUE = auto()
+    EXIT = auto()
+    ASK_AI = auto()
+    RUN = auto()
+    
+class State(Enum):
+    MAIN_MENU = auto()
+    START_MENU = auto()
+    VICTORY_MENU = auto()
+    GAMING = auto()
+    
 class Display:
     """
     Represents the display for the Sokoban game.
@@ -29,17 +36,28 @@ class Display:
         load_images(self): Loads the images for each tile type.
         render(self, map: Map): Renders the game map on the display.
     """
-    def __init__(self, map: Map):
+    def __init__(self, scale=(800, 600)):
         """
         Initializes the Display object.
 
         Args:
             map (Map): The map object representing the game map.
         """
-        self.tile_size = 400 // max(map.scale)
-        self.scale = tuple(self.tile_size * length for length in map.scale)
+        self.scale = scale
         self.screen = pygame.display.set_mode(self.scale)
+        self.state = State.START_MENU
         pygame.display.set_caption("Sokoban")
+        
+    def load_map(self, map: Map, lvl_num: int):
+        """
+        Loads the map object into the display.
+
+        Args:
+            map (Map): The map object representing the game map.
+        """
+        self.map = map
+        self.lvl_num = lvl_num
+        self.tile_size = min(self.scale[0] // len(self.map.tiles[0]), self.scale[1] // len(self.map.tiles))
         self.load_images()
 
     def load_images(self):
@@ -68,46 +86,98 @@ class Display:
                 print(f"Failed to load image for tile {tile}")
                 self.images[tile] = None
 
-    def render(self, map: Map):
-        """
-        Renders the game map on the display.
-
-        Args:
-            map (Map): The map object representing the game map.
-        """
+    def render(self) -> Event:
         self.screen.fill((0, 0, 0))
-        for y, row in enumerate(map.tiles):
+        for y, row in enumerate(self.map.tiles):
             for x, tile in enumerate(row):
                 image = self.images.get(tile)
                 if image:
                     scaled_image = pygame.transform.scale(image, (self.tile_size, self.tile_size))
                     self.screen.blit(scaled_image, (x * self.tile_size, y * self.tile_size))
-
-    def select_mode(self) -> Mode:
-        """
-        Displays a mode selection menu and returns the selected mode.
-
-        Returns:
-            Mode: The selected game mode.
-        """
-        font = pygame.font.Font(None, 36)
-        ai_text = font.render("AI Mode", True, (255, 255, 255))
-        human_text = font.render("Human Mode", True, (255, 255, 255))
-        ai_rect = ai_text.get_rect(center=(200, 100))
-        human_rect = human_text.get_rect(center=(200, 200))
-
+        pygame.display.flip()
+        return Event.RUN
+    
+    def show(self, text_pos, text_event) -> Event:
+        text_rect = {text:text.get_rect(
+            center=(self.scale[0] * text_pos[text][0], self.scale[1] * text_pos[text][1]))
+                     for text in text_pos.keys()}
         while True:
             self.screen.fill((0, 0, 0))
-            self.screen.blit(ai_text, ai_rect)
-            self.screen.blit(human_text, human_rect)
+            for text, rect in text_rect.items():
+                self.screen.blit(text, rect)
             pygame.display.flip()
-
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    quit()
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if ai_rect.collidepoint(event.pos):
-                        return Mode.AI
-                    elif human_rect.collidepoint(event.pos):
-                        return Mode.HUMAN
+                for text, ev in text_event.items():
+                    if event.type == pygame.MOUSEBUTTONDOWN \
+                        and text_rect[text].collidepoint(pygame.mouse.get_pos()):
+                        print(f"Clicked {ev}")
+                        return ev
+                    elif event.type == pygame.QUIT:
+                        return Event.EXIT
+                    
+    def victory_menu(self) -> Event:
+        victory_text = TITLE_FONT.render(f"Level {self.lvl_num} Complete!", True, (255, 255, 255))
+        next_text = BUTTON_FONT.render("Next Level", True, (255, 255, 255))
+        exit_text = BUTTON_FONT.render("Exit", True, (255, 255, 255))
+        text_event = {
+            next_text: Event.START,
+            exit_text: Event.EXIT,
+        }
+        text_pos = {
+            victory_text: (0.5, 0.4),
+            next_text: (0.5, 0.6),
+            exit_text: (0.5, 0.7)
+        }
+        return self.show(text_pos, text_event)
+                    
+    def start_menu(self) -> Event:
+        title_text = TITLE_FONT.render("Sokoban", True, (255, 255, 255))
+        start_text = BUTTON_FONT.render("Start Game", True, (255, 255, 255))
+        exit_text = BUTTON_FONT.render("Exit", True, (255, 255, 255))
+        text_event = {
+            start_text: Event.START,
+            exit_text: Event.EXIT
+        }
+        text_pos = {
+            title_text: (0.5, 0.2),
+            start_text: (0.5, 0.4),
+            exit_text: (0.5, 0.5)
+        }
+        return self.show(text_pos, text_event)
+                    
+    def main_menu(self) -> Event:
+        """
+        Displays the main menu.
+
+        Returns:
+            Event: The event corresponding to the user's selection
+        """
+        title_text = TITLE_FONT.render("Sokoban", True, (255, 255, 255))
+        start_text = BUTTON_FONT.render("Continue", True, (255, 255, 255))
+        ai_text = BUTTON_FONT.render("Ask AI", True, (255, 255, 255))
+        exit_text = BUTTON_FONT.render("Exit", True, (255, 255, 255))
+        text_event = {
+            start_text: Event.CONTINUE,
+            ai_text: Event.ASK_AI,
+            exit_text: Event.EXIT
+        }
+        text_pos = {
+            title_text: (0.5, 0.2),
+            start_text: (0.5, 0.4),
+            ai_text: (0.5, 0.5),
+            exit_text: (0.5, 0.6)
+        }
+        return self.show(text_pos, text_event)
+                    
+    def run(self) -> Event:
+        match self.state:
+            case State.GAMING:
+                return self.render()
+            case State.MAIN_MENU:
+                return self.main_menu()
+            case State.START_MENU:
+                return self.start_menu()
+            case State.VICTORY_MENU:
+                return self.victory_menu()
+            case _:
+                raise ValueError("Invalid state")

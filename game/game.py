@@ -1,6 +1,6 @@
 import pygame
-from game.problem import SokobanProblem
-from ui.display import Display
+from game.problem import SokobanProblem, SokobanAction
+from ui.display import Display, Event, State
 from ui.input_handler import InputHandler
 import os
 
@@ -12,13 +12,12 @@ class Game:
 
         It sets the initial level number, loads the first level, display, and input handler objects.
         """
-        self.lvl_num = 1
+        self.lvl_num = 0
         self.input_handler = InputHandler()
-        assert self.load_level(self.lvl_num), "Failed to load level"
-        self.mode = self.display.select_mode()
+        self.display = Display()
         self.running = True
         
-    def load_level(self, lvl_num: int) -> bool:
+    def _load_level(self, lvl_num: int) -> bool:
         """
         Loads the specified level.
 
@@ -33,8 +32,6 @@ class Game:
         except:
             return False
         self.map = self.problem.initial_state()
-        self.display = Display(self.map)
-        
         return True
 
     def run(self):
@@ -46,16 +43,30 @@ class Game:
         """
         clock = pygame.time.Clock()
         while self.running:
-            key = self.input_handler.handle_events()
-            if key:
-                print(key.name)
-                self.map = self.problem.result(self.map, key)
-            self.display.render(self.map)
-            pygame.display.flip()
-            if self.problem.is_goal(self.map):
-                print(f"Level {self.lvl_num} Complete!")
-                self.lvl_num += 1
-                if not self.load_level(self.lvl_num):
-                    self.running = False
+            match self.display.run():
+                case Event.RUN:
+                    key = self.input_handler.handle_events()
+                    if key == SokobanAction.PAUSE:
+                        self.display.state = State.MAIN_MENU
+                    elif key:
+                        print(key.name)
+                        self.map = self.problem.result(self.map, key)
+                        self.display.state = State.GAMING
+                    if self.problem.is_goal(self.map):
+                        self.display.state = State.VICTORY_MENU
+                case Event.CONTINUE:
+                    self.display.state = State.GAMING
+                case Event.EXIT:
+                    print("Exiting game...")
+                    pygame.quit()
+                    quit()
+                case Event.START:
+                    self.lvl_num += 1
+                    self._load_level(self.lvl_num)
+                    self.display.load_map(self.map, self.lvl_num)
+                    self.display.state = State.GAMING
+                case Event.ASK_AI:
+                    pass
+                case _:
+                    raise ValueError("Invalid event")
             clock.tick(60)
-        pygame.quit()

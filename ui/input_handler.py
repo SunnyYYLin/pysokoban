@@ -31,5 +31,8 @@ class InputHandler:
                 pygame.quit()
                 quit()
             if event.type == pygame.KEYDOWN:
-                return SokobanAction(event.key)
+                try:
+                    return SokobanAction(event.key)
+                except:
+                    return None
         return None
