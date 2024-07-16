@@ -1,7 +1,18 @@
 import pygame
 import os
 from game.map import SPACE, GOALBOX, GOALPLAYER, BOX, GOAL, WALL, PLAYER, Map
+from enum import Enum, auto
 
+class Mode(Enum):
+    """
+    Represents the game modes.
+
+    Attributes:
+        HUMAN: The human player mode.
+        AI: The AI player mode.
+    """
+    HUMAN = auto()
+    AI = auto()
 class Display:
     """
     Represents the display for the Sokoban game.
@@ -39,23 +50,23 @@ class Display:
             ValueError: If an image fails to load for a tile.
         """
         assets_path = "assets"
+        icon_style = "images"
         self.image_paths = {
-            GOALBOX: os.path.join(assets_path, "images", "goalbox.png"),
-            GOALPLAYER: os.path.join(assets_path, "images", "goalplayer.png"),
-            BOX: os.path.join(assets_path, "images", "box.png"),
-            GOAL: os.path.join(assets_path, "images", "goal.png"),
-            WALL: os.path.join(assets_path, "images", "wall.png"),
-            PLAYER: os.path.join(assets_path, "images", "player.png")
+            GOALBOX: os.path.join(assets_path, icon_style, "goalbox.png"),
+            GOALPLAYER: os.path.join(assets_path, icon_style, "goalplayer.png"),
+            BOX: os.path.join(assets_path, icon_style, "box.png"),
+            GOAL: os.path.join(assets_path, icon_style, "goal.png"),
+            WALL: os.path.join(assets_path, icon_style, "wall.png"),
+            PLAYER: os.path.join(assets_path, icon_style, "player.png"),
+            SPACE: os.path.join(assets_path, icon_style, "space.png"),
         }
         self.images = {}
         for tile, path in self.image_paths.items():
-            if tile == SPACE:
+            try:
+                self.images[tile] = pygame.image.load(path)
+            except:
+                print(f"Failed to load image for tile {tile}")
                 self.images[tile] = None
-            else:
-                try:
-                    self.images[tile] = pygame.image.load(path)
-                except:
-                    raise ValueError(f"Failed to load image for tile {tile}")
 
     def render(self, map: Map):
         """
@@ -71,3 +82,32 @@ class Display:
                 if image:
                     scaled_image = pygame.transform.scale(image, (self.tile_size, self.tile_size))
                     self.screen.blit(scaled_image, (x * self.tile_size, y * self.tile_size))
+
+    def select_mode(self) -> Mode:
+        """
+        Displays a mode selection menu and returns the selected mode.
+
+        Returns:
+            Mode: The selected game mode.
+        """
+        font = pygame.font.Font(None, 36)
+        ai_text = font.render("AI Mode", True, (255, 255, 255))
+        human_text = font.render("Human Mode", True, (255, 255, 255))
+        ai_rect = ai_text.get_rect(center=(200, 100))
+        human_rect = human_text.get_rect(center=(200, 200))
+
+        while True:
+            self.screen.fill((0, 0, 0))
+            self.screen.blit(ai_text, ai_rect)
+            self.screen.blit(human_text, human_rect)
+            pygame.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if ai_rect.collidepoint(event.pos):
+                        return Mode.AI
+                    elif human_rect.collidepoint(event.pos):
+                        return Mode.HUMAN

@@ -15,6 +15,7 @@ class Game:
         self.lvl_num = 1
         self.input_handler = InputHandler()
         assert self.load_level(self.lvl_num), "Failed to load level"
+        self.mode = self.display.select_mode()
         self.running = True
         
     def load_level(self, lvl_num: int) -> bool:

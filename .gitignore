@@ -163,3 +163,4 @@ cython_debug/
 
 *Zone.Identifier
 sealgo/
+test.py
