@@ -1,7 +1,8 @@
 from sealgo.sealgo_pkg.Problem import SearchProblem
 from game.problem import SokobanAction as A
+from sealgo.sealgo_pkg.LocalSearch import StochasticHillClimbing
 
-class AI():
+class ToyAI():
     def __init__(self, problem: SearchProblem):
         self.problem = problem
         self.state = problem.initial_state()
@@ -15,4 +16,6 @@ class AI():
         ]
         solutions.append(solution)
         return solutions
+    
+AI = StochasticHillClimbing
     

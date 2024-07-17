@@ -1,22 +1,30 @@
 from game.map import Map
-from game.map import SPACE, GOALBOX, BOX, GOAL, GOALPLAYER, PLAYER
+from game.map import Tile
 import pygame
-from enum import Enum
-from sealgo.sealgo_pkg.Problem import SearchProblem, State, Action
+from enum import Enum, auto
+from sealgo.sealgo_pkg.Problem import HeuristicSearchProblem, State, Action
 from os import path
-from typing import TypeAlias
-
-DIRECTIONS:dict[int,tuple[int,int]] = \
-    {pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1), pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0)}
+from typing import TypeAlias, List
+import numpy as np
+from functools import cache
+from copy import copy
 
 class SokobanAction(Enum):
-    UP = pygame.K_UP
-    DOWN = pygame.K_DOWN
-    LEFT = pygame.K_LEFT
-    RIGHT = pygame.K_RIGHT
-    PAUSE = pygame.K_ESCAPE
+    UP = auto()
+    DOWN = auto()
+    LEFT = auto()
+    RIGHT = auto()
+    PAUSE = auto()
+    
+_action_dirs:dict[int,tuple[int,int]] = {
+    SokobanAction.UP: (-1, 0),
+    SokobanAction.DOWN: (1, 0),
+    SokobanAction.LEFT: (0, -1),
+    SokobanAction.RIGHT: (0, 1),
+    Action.STAY: (0, 0)
+}
 
-class SokobanProblem(SearchProblem):
+class SokobanProblem(HeuristicSearchProblem):
     """
     Represents a Sokoban problem.
 
@@ -32,9 +40,6 @@ class SokobanProblem(SearchProblem):
     - result(self, map: State, action: Action) -> State: Returns the resulting state after taking an action.
     - is_goal(self, map: State): Checks if the given state is a goal state.
     - step_cost(self, map: State, action: Action): Returns the cost of taking an action in a given state.
-    - _move(self, dx: int, dy: int, map: Map): Moves the player in a given direction.
-    - _push(self, x: int, y: int, dx: int, dy: int, map: Map) -> bool: Pushes a box in a given direction.
-
     """
 
     State: TypeAlias = Map
@@ -60,7 +65,7 @@ class SokobanProblem(SearchProblem):
         """
         return self.level.__copy__()
     
-    def actions(self, map: State):
+    def actions(self, map: State) -> List[Action]:
         """
         Returns the possible actions for a given state.
 
@@ -71,7 +76,8 @@ class SokobanProblem(SearchProblem):
         - The possible actions for the given state.
 
         """
-        for action, dir in DIRECTIONS:
+        actions = []
+        for action, dir in _action_dirs.items():
             new_x = map.player_x + dir[0]
             new_y = map.player_y + dir[1]
             if map.is_wall(new_x, new_y):
@@ -79,7 +85,8 @@ class SokobanProblem(SearchProblem):
             if map.is_box(new_x, new_y):
                 if map.is_wall(new_x + dir[0], new_y + dir[1]) or map.is_box(new_x + dir[0], new_y + dir[1]):
                     continue
-            yield action
+            actions.append(action)
+        return actions
     
     def result(self, map: State, action: Action) -> State:
         """
@@ -93,17 +100,9 @@ class SokobanProblem(SearchProblem):
         - The resulting state after taking the action.
 
         """
-        match action:
-            case self.Action.UP:
-                return map.p_move(-1, 0)
-            case self.Action.DOWN:
-                return map.p_move(1, 0)
-            case self.Action.LEFT:
-                return map.p_move(0, -1)
-            case self.Action.RIGHT:
-                return map.p_move(0, 1)
-            case _:
-                return map
+        if action == Action.STAY:
+            return map
+        return map.p_move(_action_dirs[action][0], _action_dirs[action][1])
         
     def is_goal(self, map: State):
         """
@@ -131,6 +130,45 @@ class SokobanProblem(SearchProblem):
 
         """
         return 1
+    
+    @cache
+    def heuristic(self, map: State):
+        """
+        Returns the heuristic value of a given state.
+
+        Args:
+        - map: The state to be evaluated.
+
+        Returns:
+        - The heuristic value of the state.
+
+        """
+        return self._manhattan_distance(map)
+    
+    def _manhattan_distance(self, map: Map) -> int:
+        """
+        Calculates the sum of Manhattan distances between each box and the closest goal.
+
+        Args:
+            state (Map): The current state of the Sokoban problem.
+
+        Returns:
+            int: The heuristic value.
+        """
+        boxes = map.locate_boxes()
+        goals = map.locate_goals()
+
+        total_distance = 0
+        for box in boxes:
+            for goal in goals:
+                min_distance = np.inf
+                for goal in goals:
+                    distance = abs(box[0] - goal[0]) + abs(box[1] - goal[1])
+                    if distance < min_distance:
+                        min_distance = distance
+            total_distance += min_distance
+
+        return total_distance
     
     def exists_dead_boxes(self, map: State) -> bool:
         """

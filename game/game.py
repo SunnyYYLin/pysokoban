@@ -15,12 +15,12 @@ class Game:
 
         It sets the initial level number, loads the first level, display, and input handler objects.
         """
-        self.lvl_num = 0
+        self.lvl_num = -1
         self.input_handler = InputHandler()
         self.display = Display()
         self.running = True
         
-    def _load_level(self, lvl_num: int) -> bool:
+    def _load_level(self, lvl_num: int) -> None:
         """
         Loads the specified level.
 
@@ -31,13 +31,9 @@ class Game:
             bool: True if the level is loaded successfully, False otherwise.
         """
         levels_folder = "levels"
-        try:
-            map = Map(os.path.join(levels_folder, f"level{lvl_num}.txt"))
-            self.problem = SokobanProblem(map)
-        except:
-            return False
+        map = Map(os.path.join(levels_folder, f"level{lvl_num}.txt"))
+        self.problem = SokobanProblem(map)
         self.map = self.problem.initial_state()
-        return True
 
     def run(self):
         """
@@ -50,12 +46,12 @@ class Game:
         while self.running:
             match self.display.run():
                 case Event.RUN:
-                    key = self.input_handler.handle_events()
-                    if key == SokobanAction.PAUSE:
+                    action = self.input_handler.handle_events()
+                    if action == SokobanAction.PAUSE:
                         self.display.state = State.MAIN_MENU
-                    elif key:
-                        print(key.name)
-                        self.map = self.problem.result(self.map, key)
+                    elif action:
+                        print(action.name)
+                        self.map = self.problem.result(self.map, action)
                         self.display.state = State.GAMING
                     if self.problem.is_goal(self.map):
                         self.display.state = State.VICTORY_MENU
@@ -74,13 +70,16 @@ class Game:
                     problem = SokobanProblem(self.map)
                     ai = AI(problem)
                     solutions = ai.search()
-                    for solution in solutions:
-                        delay = SOLUTION_DISPLAY_TIME // len(solution)
-                        for n, action in enumerate(solution):
-                            print(f"AI{n+1}: {action.name}")
-                            self.map = self.problem.result(self.map, action)
-                            self.display.render()
-                            pygame.time.wait(delay)
+                    if len(solutions) == 0:
+                        print("Failed to find a solution.")
+                    else:
+                        for solution in solutions:
+                            delay = SOLUTION_DISPLAY_TIME // len(solution)
+                            print(solution)
+                            for action in solution:
+                                self.map = self.problem.result(self.map, action)
+                                self.display.render()
+                                pygame.time.wait(delay)
                     self.display.state = State.GAMING
                 case _:
                     raise ValueError("Invalid event")

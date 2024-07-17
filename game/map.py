@@ -1,15 +1,37 @@
 from typing import List
 import numpy as np
+from enum import Enum, auto
+from typing import List
+import numpy as np
 
-WALL = 'W'
-BOX = 'B'
-GOALBOX = 'Y'
-GOALPLAYER = 'X'
-GOAL = 'G'
-PLAYER = 'P'
-SPACE = ' '
+class Tile(Enum):
+    WALL = auto()
+    BOX = auto()
+    GOALBOX = auto()
+    GOALPLAYER = auto()
+    GOAL = auto()
+    PLAYER = auto()
+    SPACE = auto()
+
 Pos = tuple[int, int]
-Tile = str
+_char_tiles = {
+    'W': Tile.WALL,
+    'B': Tile.BOX,
+    'Y': Tile.GOALBOX,
+    'X': Tile.GOALPLAYER,
+    'G': Tile.GOAL,
+    'P': Tile.PLAYER,
+    ' ': Tile.SPACE,
+}
+_tile_chars = {
+    Tile.WALL: 'W',
+    Tile.BOX: 'B',
+    Tile.GOALBOX: 'Y',
+    Tile.GOALPLAYER: 'X',
+    Tile.GOAL: 'G',
+    Tile.PLAYER: 'P',
+    Tile.SPACE: ' ',
+}
 
 class Map:
     def __init__(self, level_file: str = ''):
@@ -25,7 +47,15 @@ class Map:
         if level_file != '':
             self.scale: Pos = self._load(level_file)
             self.player_x, self.player_y = self.locate_player()
+            
+    def __str__(self) -> str:
+        """
+        Returns a string representation of the map.
 
+        Returns:
+            str: The string representation of the map.
+        """
+        return '\n'.join([''.join([str(_tile_chars[tile]) for tile in row]) for row in self.tiles])+'\n'
 
     def _load(self, level_file: str) -> Pos:
         """
@@ -40,10 +70,11 @@ class Map:
         tiles = []
         with open(level_file, 'r') as file:
             for line in file:
-                tiles.append(list(line.strip()))
+                tiles.append([_char_tiles[char] for char in line.strip()])
         self.tiles = np.array(tiles)
+        print(f"Loaded map: \n{self}")
         return tuple(self.tiles.shape)
-                
+
     def locate_player(self) -> Pos:
         """
         Locates the player in the map.
@@ -51,11 +82,33 @@ class Map:
         Returns:
             Pos|None: The position of the player, or None if not found.
         """
-        player_pos = tuple(np.where(self.tiles == PLAYER))
+        player_pos = np.where((self.tiles == Tile.PLAYER) | (self.tiles == Tile.GOALPLAYER))
         assert len(player_pos[0]) == 1, "There should be only one player in the map."
         return player_pos[0][0], player_pos[1][0]
 
-    def get_tile(self, x:int , y: int) -> Tile:
+    def locate_boxes(self) -> List[Pos]:
+        """
+        Locates the boxes in the map.
+
+        Returns:
+            List[Pos]: The positions of the boxes.
+        """
+        box_pos = np.where((self.tiles == Tile.BOX) | (self.tiles == Tile.GOALBOX))
+        assert len(box_pos[0]) > 0, "There should be at least one box in the map."
+        return [(x, y) for x, y in zip(box_pos[0], box_pos[1])]
+
+    def locate_goals(self) -> List[Pos]:
+        """
+        Locates the goals in the map.
+
+        Returns:
+            List[Pos]: The positions of the goals.
+        """
+        goal_pos = np.where((self.tiles == Tile.GOAL) | (self.tiles == Tile.GOALBOX) | (self.tiles == Tile.GOALPLAYER))
+        assert len(goal_pos[0]) > 0, "There should be at least one goal in the map."
+        return [(x, y) for x, y in zip(goal_pos[0], goal_pos[1])]
+
+    def get_tile(self, x: int, y: int) -> Tile:
         """
         Gets the tile at the specified position.
 
@@ -93,7 +146,7 @@ class Map:
         Returns:
             bool: True if the tile is a wall, False otherwise.
         """
-        return self.tiles[x][y] == WALL
+        return self.tiles[x][y] == Tile.WALL
 
     def is_box(self, x: int, y: int) -> bool:
         """
@@ -106,7 +159,7 @@ class Map:
         Returns:
             bool: True if the tile is a box(BOX/GOALBOX), False otherwise.
         """
-        return self.tiles[x][y] == BOX or self.tiles[x][y] == GOALBOX
+        return self.tiles[x][y] == Tile.BOX or self.tiles[x][y] == Tile.GOALBOX
 
     def is_goal(self, x: int, y: int) -> bool:
         """
@@ -119,8 +172,8 @@ class Map:
         Returns:
             bool: True if the tile is a goal(GOAL/GOALBOX/GOALPLAYER), False otherwise.
         """
-        return self.tiles[x][y] == GOAL or self.tiles[x][y] == GOALBOX or self.tiles[x][y] == GOALPLAYER
-    
+        return self.tiles[x][y] == Tile.GOAL or self.tiles[x][y] == Tile.GOALBOX or self.tiles[x][y] == Tile.GOALPLAYER
+
     def is_space(self, x: int, y: int) -> bool:
         """
         Checks if the tile at the specified position is a space.
@@ -132,8 +185,8 @@ class Map:
         Returns:
             bool: True if the tile is a space(SPACE/GOAL), False otherwise.
         """
-        return self.tiles[x][y] == SPACE or self.tiles[x][y] == GOAL
-    
+        return self.tiles[x][y] == Tile.SPACE or self.tiles[x][y] == Tile.GOAL
+
     def is_player(self, x: int, y: int) -> bool:
         """
         Checks if the tile at the specified position is the player.
@@ -145,20 +198,20 @@ class Map:
         Returns:
             bool: True if the tile is the player(PLAYER/GOALPLAYER), False otherwise.
         """
-        return self.tiles[x][y] == PLAYER or self.tiles[x][y] == GOALPLAYER
-    
+        return self.tiles[x][y] == Tile.PLAYER or self.tiles[x][y] == Tile.GOALPLAYER
+
     def is_all_boxes_in_place(self) -> bool:
-            """
-            Check if all boxes are in their designated places.
-            
-            Returns:
-                bool: True if all boxes are in place, False otherwise.
-            """
-            for row in self.tiles:
-                if BOX in row:
-                    return False
-            return True
-    
+        """
+        Check if all boxes are in their designated places.
+
+        Returns:
+            bool: True if all boxes are in place, False otherwise.
+        """
+        for row in self.tiles:
+            if Tile.BOX in row:
+                return False
+        return True
+
     def __copy__(self) -> "Map":
         """
         Copies the map.
@@ -167,12 +220,12 @@ class Map:
             Map: The copied map.
         """
         new_map = Map()
-        new_map.tiles = [row.copy() for row in self.tiles]
+        new_map.tiles = np.copy(self.tiles)
         new_map.scale = self.scale
         new_map.player_x, new_map.player_y = self.player_x, self.player_y
         return new_map
-    
-    def p_move(self, dx: int, dy: int):
+
+    def p_move(self, dx: int, dy: int) -> "Map":
         """
         Moves the player in a given direction.
 
@@ -202,14 +255,14 @@ class Map:
         # move freely
         # move off
         if self.is_goal(self.player_x, self.player_y):
-            self.set_tile(self.player_x, self.player_y, GOAL)
+            self.set_tile(self.player_x, self.player_y, Tile.GOAL)
         else:
-            self.set_tile(self.player_x, self.player_y, SPACE)
+            self.set_tile(self.player_x, self.player_y, Tile.SPACE)
         # move onto
         if self.is_goal(new_x, new_y):
-            self.set_tile(new_x, new_y, GOALPLAYER)
+            self.set_tile(new_x, new_y, Tile.GOALPLAYER)
         else:
-            self.set_tile(new_x, new_y, PLAYER)
+            self.set_tile(new_x, new_y, Tile.PLAYER)
         # update map-player coordinates
         self.player_x += dx
         self.player_y += dy
@@ -238,12 +291,12 @@ class Map:
             return False
         # push off
         if self.is_goal(x, y):
-            self.set_tile(x, y, GOAL)
+            self.set_tile(x, y, Tile.GOAL)
         else:
-            self.set_tile(x, y, SPACE)
+            self.set_tile(x, y, Tile.SPACE)
         # push onto
         if self.is_goal(new_x, new_y):
-            self.set_tile(new_x, new_y, GOALBOX)
+            self.set_tile(new_x, new_y, Tile.GOALBOX)
         else:
-            self.set_tile(new_x, new_y, BOX)
+            self.set_tile(new_x, new_y, Tile.BOX)
         return True

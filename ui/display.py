@@ -1,6 +1,6 @@
 import pygame
 import os
-from game.map import SPACE, GOALBOX, GOALPLAYER, BOX, GOAL, WALL, PLAYER, Map
+from game.map import Tile, Map
 from enum import Enum, auto
 
 pygame.init()
@@ -70,13 +70,13 @@ class Display:
         assets_path = "assets"
         icon_style = "images"
         self.image_paths = {
-            GOALBOX: os.path.join(assets_path, icon_style, "goalbox.png"),
-            GOALPLAYER: os.path.join(assets_path, icon_style, "goalplayer.png"),
-            BOX: os.path.join(assets_path, icon_style, "box.png"),
-            GOAL: os.path.join(assets_path, icon_style, "goal.png"),
-            WALL: os.path.join(assets_path, icon_style, "wall.png"),
-            PLAYER: os.path.join(assets_path, icon_style, "player.png"),
-            SPACE: os.path.join(assets_path, icon_style, "space.png"),
+            Tile.GOALBOX: os.path.join(assets_path, icon_style, "goalbox.png"),
+            Tile.GOALPLAYER: os.path.join(assets_path, icon_style, "goalplayer.png"),
+            Tile.BOX: os.path.join(assets_path, icon_style, "box.png"),
+            Tile.GOAL: os.path.join(assets_path, icon_style, "goal.png"),
+            Tile.WALL: os.path.join(assets_path, icon_style, "wall.png"),
+            Tile.PLAYER: os.path.join(assets_path, icon_style, "player.png"),
+            Tile.SPACE: os.path.join(assets_path, icon_style, "space.png"),
         }
         self.images = {}
         for tile, path in self.image_paths.items():
