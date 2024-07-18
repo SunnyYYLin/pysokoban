@@ -19,6 +19,7 @@ class Game:
         self.input_handler = InputHandler()
         self.display = Display()
         self.running = True
+        self.map = Map()
         
     def _load_level(self, lvl_num: int) -> None:
         """
@@ -44,7 +45,7 @@ class Game:
         """
         clock = pygame.time.Clock()
         while self.running:
-            match self.display.run():
+            match self.display.run(self.map, self.lvl_num):
                 case Event.RUN:
                     action = self.input_handler.handle_events()
                     if action == SokobanAction.PAUSE:
@@ -64,7 +65,6 @@ class Game:
                 case Event.START:
                     self.lvl_num += 1
                     self._load_level(self.lvl_num)
-                    self.display.load_map(self.map, self.lvl_num)
                     self.display.state = State.GAMING
                 case Event.ASK_AI:
                     problem = SokobanProblem(self.map)
@@ -78,7 +78,7 @@ class Game:
                             print(solution)
                             for action in solution:
                                 self.map = self.problem.result(self.map, action)
-                                self.display.render()
+                                self.display.render(self.map)
                                 pygame.time.wait(delay)
                     self.display.state = State.GAMING
                 case _:

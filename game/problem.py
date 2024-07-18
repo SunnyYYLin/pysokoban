@@ -8,6 +8,7 @@ from typing import TypeAlias, List
 import numpy as np
 from functools import cache
 from copy import copy
+from scipy.optimize import linear_sum_assignment
 
 class SokobanAction(Enum):
     UP = auto()
@@ -100,9 +101,11 @@ class SokobanProblem(HeuristicSearchProblem):
         - The resulting state after taking the action.
 
         """
+        new_map = map.__copy__()
+        del map
         if action == Action.STAY:
-            return map
-        return map.p_move(_action_dirs[action][0], _action_dirs[action][1])
+            return new_map
+        return new_map.p_move(_action_dirs[action][0], _action_dirs[action][1])
         
     def is_goal(self, map: State):
         """
@@ -143,7 +146,7 @@ class SokobanProblem(HeuristicSearchProblem):
         - The heuristic value of the state.
 
         """
-        return self._manhattan_distance(map)
+        return self._min_perfect_matching(map) + 50*self._exists_dead_boxes(map)
     
     def _manhattan_distance(self, map: Map) -> int:
         """
@@ -170,24 +173,42 @@ class SokobanProblem(HeuristicSearchProblem):
 
         return total_distance
     
-    def exists_dead_boxes(self, map: State) -> bool:
+    def _min_perfect_matching(self, map: Map) -> int:
         """
-        Checks if there are any dead boxes in the given state.
+        Calculates the minimum perfect matching between the boxes and the goals.
 
         Args:
-        - map: The state to be checked.
+            state (Map): The current state of the Sokoban problem.
 
         Returns:
-        - True if there are dead boxes, False otherwise.
-
+            int: The heuristic value.
         """
-        for x in range(map.width):
-            for y in range(map.height):
-                if map.is_box(x, y):
-                    if map.is_goal(x, y):
-                        continue
-                    if map.is_wall(x - 1, y) and (map.is_wall(x, y - 1) or map.is_wall(x, y + 1)):
-                        return True
-                    if map.is_wall(x + 1, y) and (map.is_wall(x, y - 1) or map.is_wall(x, y + 1)):
-                        return True
-        return False
+        boxes = map.locate_boxes()
+        goals = map.locate_goals()
+
+        num_boxes = len(boxes)
+        num_goals = len(goals)
+
+        cost_matrix = np.zeros((num_boxes, num_goals))
+        for i, box in enumerate(boxes):
+            for j, goal in enumerate(goals):
+                cost_matrix[i, j] = abs(box[0] - goal[0]) + abs(box[1] - goal[1])
+                
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+        return cost_matrix[row_ind, col_ind].sum()
+    
+    def _exists_dead_boxes(self, map: State) -> int:
+        """
+        Calculates the number of dead boxes in the map.
+
+        Args:
+            state (Map): The current state of the Sokoban problem.
+
+        Returns:
+            int: The heuristic value.
+        """
+        dead_boxes = 0
+        for box in map.locate_boxes():
+            if map.is_deadlock(box[0], box[1]):
+                dead_boxes += 1
+        return dead_boxes

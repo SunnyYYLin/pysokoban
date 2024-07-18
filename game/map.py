@@ -56,6 +56,24 @@ class Map:
             str: The string representation of the map.
         """
         return '\n'.join([''.join([str(_tile_chars[tile]) for tile in row]) for row in self.tiles])+'\n'
+    
+    def __hash__(self) -> int:
+        """
+        Computes the hash value of the map.
+
+        Returns:
+            int: The hash value of the map.
+        """
+        return hash(str(self))
+    
+    def __eq__(self, other: "Map") -> bool:
+        """
+        Compares the map with another map for equality.
+
+        Returns:
+            bool: True if the maps are equal, False otherwise.
+        """
+        return np.array_equal(self.tiles, other.tiles)
 
     def _load(self, level_file: str) -> Pos:
         """
@@ -186,6 +204,19 @@ class Map:
             bool: True if the tile is a space(SPACE/GOAL), False otherwise.
         """
         return self.tiles[x][y] == Tile.SPACE or self.tiles[x][y] == Tile.GOAL
+    
+    def is_blocked(self, x: int, y: int) -> bool:
+        """
+        Checks if the tile at the specified position is blocked.
+
+        Args:
+            x (int): The x-coordinate of the position.
+            y (int): The y-coordinate of the position.
+
+        Returns:
+            bool: True if the tile is blocked(WALL/BOX), False otherwise.
+        """
+        return self.is_wall(x, y) or self.is_box(x, y)
 
     def is_player(self, x: int, y: int) -> bool:
         """
@@ -300,3 +331,26 @@ class Map:
         else:
             self.set_tile(new_x, new_y, Tile.BOX)
         return True
+    
+    def is_deadlock(self, x: int, y: int) -> bool:
+        """
+        Checks if the box at the specified position is in a deadlock.
+
+        Args:
+            x (int): The x-coordinate of the box.
+            y (int): The y-coordinate of the box.
+
+        Returns:
+            bool: True if the box is in a deadlock, False otherwise.
+        """
+        if self.is_goal(x, y):
+            return False
+        if self.is_blocked(x - 1, y) and self.is_blocked(x, y - 1):
+            return True
+        if self.is_blocked(x - 1, y) and self.is_blocked(x, y + 1):
+            return True
+        if self.is_blocked(x + 1, y) and self.is_blocked(x, y - 1):
+            return True
+        if self.is_blocked(x + 1, y) and self.is_blocked(x, y + 1):
+            return True
+        return False

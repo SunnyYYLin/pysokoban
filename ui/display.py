@@ -46,19 +46,8 @@ class Display:
         self.scale = scale
         self.screen = pygame.display.set_mode(self.scale)
         self.state = State.START_MENU
-        pygame.display.set_caption("Sokoban")
-        
-    def load_map(self, map: Map, lvl_num: int):
-        """
-        Loads the map object into the display.
-
-        Args:
-            map (Map): The map object representing the game map.
-        """
-        self.map = map
-        self.lvl_num = lvl_num
-        self.tile_size = min(self.scale[0] // len(self.map.tiles[0]), self.scale[1] // len(self.map.tiles))
         self.load_images()
+        pygame.display.set_caption("Sokoban")
 
     def load_images(self):
         """
@@ -86,9 +75,10 @@ class Display:
                 print(f"Failed to load image for tile {tile}")
                 self.images[tile] = None
 
-    def render(self) -> Event:
+    def render(self, map) -> Event:
+        self.tile_size = min(self.scale[0] // map.scale[1], self.scale[0] // map.scale[1])
         self.screen.fill((0, 0, 0))
-        for y, row in enumerate(self.map.tiles):
+        for y, row in enumerate(map.tiles):
             for x, tile in enumerate(row):
                 image = self.images.get(tile)
                 if image:
@@ -115,8 +105,8 @@ class Display:
                     elif event.type == pygame.QUIT:
                         return Event.EXIT
                     
-    def victory_menu(self) -> Event:
-        victory_text = TITLE_FONT.render(f"Level {self.lvl_num} Complete!", True, (255, 255, 255))
+    def victory_menu(self, lvl_num: int) -> Event:
+        victory_text = TITLE_FONT.render(f"Level {lvl_num} Complete!", True, (255, 255, 255))
         next_text = BUTTON_FONT.render("Next Level", True, (255, 255, 255))
         exit_text = BUTTON_FONT.render("Exit", True, (255, 255, 255))
         text_event = {
@@ -145,14 +135,14 @@ class Display:
         }
         return self.show(text_pos, text_event)
                     
-    def main_menu(self) -> Event:
+    def main_menu(self, lvl_num: int) -> Event:
         """
         Displays the main menu.
 
         Returns:
             Event: The event corresponding to the user's selection
         """
-        title_text = TITLE_FONT.render("Sokoban", True, (255, 255, 255))
+        title_text = TITLE_FONT.render(f"Level {lvl_num}", True, (255, 255, 255))
         start_text = BUTTON_FONT.render("Continue", True, (255, 255, 255))
         ai_text = BUTTON_FONT.render("Ask AI", True, (255, 255, 255))
         exit_text = BUTTON_FONT.render("Exit", True, (255, 255, 255))
@@ -169,15 +159,15 @@ class Display:
         }
         return self.show(text_pos, text_event)
                     
-    def run(self) -> Event:
+    def run(self, map: map, lvl_num: int) -> Event:
         match self.state:
             case State.GAMING:
-                return self.render()
+                return self.render(map)
             case State.MAIN_MENU:
-                return self.main_menu()
+                return self.main_menu(lvl_num)
             case State.START_MENU:
                 return self.start_menu()
             case State.VICTORY_MENU:
-                return self.victory_menu()
+                return self.victory_menu(lvl_num)
             case _:
                 raise ValueError("Invalid state")
