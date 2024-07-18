@@ -49,31 +49,16 @@ class Map:
             self.player_x, self.player_y = self.locate_player()
             
     def __str__(self) -> str:
-        """
-        Returns a string representation of the map.
-
-        Returns:
-            str: The string representation of the map.
-        """
         return '\n'.join([''.join([str(_tile_chars[tile]) for tile in row]) for row in self.tiles])+'\n'
     
     def __hash__(self) -> int:
-        """
-        Computes the hash value of the map.
-
-        Returns:
-            int: The hash value of the map.
-        """
         return hash(str(self))
     
     def __eq__(self, other: "Map") -> bool:
-        """
-        Compares the map with another map for equality.
-
-        Returns:
-            bool: True if the maps are equal, False otherwise.
-        """
         return np.array_equal(self.tiles, other.tiles)
+    
+    def __lt__(self, other: "Map") -> bool:
+        return hash(self) < hash(other)
 
     def _load(self, level_file: str) -> Pos:
         """
@@ -88,8 +73,8 @@ class Map:
         tiles = []
         with open(level_file, 'r') as file:
             for line in file:
-                tiles.append([_char_tiles[char] for char in line.strip()])
-        self.tiles = np.array(tiles)
+                tiles.append([_char_tiles[char] for char in line.rstrip('\n')])
+        self.tiles = np.array(tiles, dtype=object)
         print(f"Loaded map: \n{self}")
         return tuple(self.tiles.shape)
 
