@@ -134,7 +134,16 @@ class SokobanProblem(HeuristicSearchProblem):
         """
         return 1
     
-    @cache
+    def goal_state(self) -> State:
+        """
+        Returns the goal state of the problem.
+
+        Returns:
+        - The goal state of the problem.
+
+        """
+        return self.level.__copy__().goal_state()
+    
     def heuristic(self, map: State):
         """
         Returns the heuristic value of a given state.

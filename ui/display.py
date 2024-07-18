@@ -9,6 +9,7 @@ BUTTON_FONT = pygame.font.Font(None, 48)
 
 class Event(Enum):
     START = auto()
+    RESTART = auto()
     CONTINUE = auto()
     EXIT = auto()
     ASK_AI = auto()
@@ -76,7 +77,7 @@ class Display:
                 self.images[tile] = None
 
     def render(self, map) -> Event:
-        self.tile_size = min(self.scale[0] // map.scale[1], self.scale[0] // map.scale[1])
+        self.tile_size = min(self.scale[0] // map.scale[1], self.scale[1] // map.scale[0])
         self.screen.fill((0, 0, 0))
         for y, row in enumerate(map.tiles):
             for x, tile in enumerate(row):
@@ -87,7 +88,7 @@ class Display:
         pygame.display.flip()
         return Event.RUN
     
-    def show(self, text_pos, text_event) -> Event:
+    def _show(self, text_pos, text_event) -> Event:
         text_rect = {text:text.get_rect(
             center=(self.scale[0] * text_pos[text][0], self.scale[1] * text_pos[text][1]))
                      for text in text_pos.keys()}
@@ -118,7 +119,7 @@ class Display:
             next_text: (0.5, 0.6),
             exit_text: (0.5, 0.7)
         }
-        return self.show(text_pos, text_event)
+        return self._show(text_pos, text_event)
                     
     def start_menu(self) -> Event:
         title_text = TITLE_FONT.render("Sokoban", True, (255, 255, 255))
@@ -133,7 +134,7 @@ class Display:
             start_text: (0.5, 0.4),
             exit_text: (0.5, 0.5)
         }
-        return self.show(text_pos, text_event)
+        return self._show(text_pos, text_event)
                     
     def main_menu(self, lvl_num: int) -> Event:
         """
@@ -144,20 +145,23 @@ class Display:
         """
         title_text = TITLE_FONT.render(f"Level {lvl_num}", True, (255, 255, 255))
         start_text = BUTTON_FONT.render("Continue", True, (255, 255, 255))
+        restart_text = BUTTON_FONT.render("Restart", True, (255, 255, 255))
         ai_text = BUTTON_FONT.render("Ask AI", True, (255, 255, 255))
         exit_text = BUTTON_FONT.render("Exit", True, (255, 255, 255))
         text_event = {
             start_text: Event.CONTINUE,
+            restart_text: Event.RESTART,
             ai_text: Event.ASK_AI,
             exit_text: Event.EXIT
         }
         text_pos = {
             title_text: (0.5, 0.2),
-            start_text: (0.5, 0.4),
+            start_text: (0.5, 0.3),
+            restart_text: (0.5, 0.4),
             ai_text: (0.5, 0.5),
             exit_text: (0.5, 0.6)
         }
-        return self.show(text_pos, text_event)
+        return self._show(text_pos, text_event)
                     
     def run(self, map: map, lvl_num: int) -> Event:
         match self.state:

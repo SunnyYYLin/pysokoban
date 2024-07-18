@@ -227,6 +227,17 @@ class Map:
             if Tile.BOX in row:
                 return False
         return True
+    
+    def set_to_goal(self) -> None:
+        """
+        Sets all boxes to their designated places.
+
+        Returns:
+            None
+        """
+        self.tiles[self.tiles == Tile.BOX] = Tile.SPACE
+        self.tiles[self.tiles == Tile.GOALBOX] = Tile.GOAL
+        
 
     def __copy__(self) -> "Map":
         """

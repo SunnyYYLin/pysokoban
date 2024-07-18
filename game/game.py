@@ -66,6 +66,9 @@ class Game:
                     self.lvl_num += 1
                     self._load_level(self.lvl_num)
                     self.display.state = State.GAMING
+                case Event.RESTART:
+                    self.map = self.problem.initial_state()
+                    self.display.state = State.GAMING
                 case Event.ASK_AI:
                     problem = SokobanProblem(self.map)
                     ai = AI(problem)
