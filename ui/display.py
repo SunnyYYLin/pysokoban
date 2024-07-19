@@ -98,13 +98,19 @@ class Display:
                 self.screen.blit(text, rect)
             pygame.display.flip()
             for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return Event.EXIT
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                    return Event.START
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_a:
+                    return Event.ASK_AI
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                    return Event.RESTART
                 for text, ev in text_event.items():
                     if event.type == pygame.MOUSEBUTTONDOWN \
                         and text_rect[text].collidepoint(pygame.mouse.get_pos()):
                         print(f"Clicked {ev}")
                         return ev
-                    elif event.type == pygame.QUIT:
-                        return Event.EXIT
                     
     def victory_menu(self, lvl_num: int) -> Event:
         victory_text = TITLE_FONT.render(f"Level {lvl_num} Complete!", True, (255, 255, 255))

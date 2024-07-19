@@ -350,3 +350,15 @@ class Map:
         if self.is_blocked(x + 1, y) and self.is_blocked(x, y + 1):
             return True
         return False
+    
+    def _manhatten_d(self, pos1: Pos, pos2: Pos) -> int:
+        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+    
+    def player_to_boxes(self) -> int:
+        boxes = self.locate_boxes()
+        return min([self._manhatten_d((self.player_x, self.player_y), box) for box in boxes])
+    
+    def boxes_to_goals(self) -> int:
+        boxes = self.locate_boxes()
+        goals = self.locate_goals()
+        return sum([min([self._manhatten_d(box, goal) for goal in goals]) for box in boxes])

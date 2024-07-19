@@ -144,7 +144,7 @@ class SokobanProblem(HeuristicSearchProblem):
         """
         return self.level.__copy__().goal_state()
     
-    def heuristic(self, map: State):
+    def heuristic(self, map: State) -> int:
         """
         Returns the heuristic value of a given state.
 
@@ -155,32 +155,7 @@ class SokobanProblem(HeuristicSearchProblem):
         - The heuristic value of the state.
 
         """
-        return self._min_perfect_matching(map) + 50*self._exists_dead_boxes(map)
-    
-    def _manhattan_distance(self, map: Map) -> int:
-        """
-        Calculates the sum of Manhattan distances between each box and the closest goal.
-
-        Args:
-            state (Map): The current state of the Sokoban problem.
-
-        Returns:
-            int: The heuristic value.
-        """
-        boxes = map.locate_boxes()
-        goals = map.locate_goals()
-
-        total_distance = 0
-        for box in boxes:
-            for goal in goals:
-                min_distance = np.inf
-                for goal in goals:
-                    distance = abs(box[0] - goal[0]) + abs(box[1] - goal[1])
-                    if distance < min_distance:
-                        min_distance = distance
-            total_distance += min_distance
-
-        return total_distance
+        return 2 * map.boxes_to_goals() + 50*self._exists_dead_boxes(map) + map.player_to_boxes()
     
     def _min_perfect_matching(self, map: Map) -> int:
         """
