@@ -169,15 +169,7 @@ class SokobanProblem(HeuristicSearchProblem):
         """
         boxes = map.locate_boxes()
         goals = map.locate_goals()
-
-        num_boxes = len(boxes)
-        num_goals = len(goals)
-
-        cost_matrix = np.zeros((num_boxes, num_goals))
-        for i, box in enumerate(boxes):
-            for j, goal in enumerate(goals):
-                cost_matrix[i, j] = abs(box[0] - goal[0]) + abs(box[1] - goal[1])
-                
+        cost_matrix = map.cost_matrix(boxes, goals)
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
         return cost_matrix[row_ind, col_ind].sum()
     
@@ -191,8 +183,5 @@ class SokobanProblem(HeuristicSearchProblem):
         Returns:
             int: The heuristic value.
         """
-        dead_boxes = 0
-        for box in map.locate_boxes():
-            if map.is_deadlock(box[0], box[1]):
-                dead_boxes += 1
-        return dead_boxes
+        boxes = map.locate_boxes()
+        return sum(map.is_deadlock(box[0], box[1]) for box in boxes)

@@ -21,9 +21,8 @@ def main():
                             logging.StreamHandler()
                         ])
     pygame.init()
-    game = Game(args.level - 1)
+    game = Game(args.level)
     if args.test:
-        print("Running in test mode")
         game.test()
     else:
         game.run()

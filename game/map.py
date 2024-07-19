@@ -88,16 +88,16 @@ class Map:
         assert len(player_pos[0]) == 1, "There should be only one player in the map."
         return player_pos[0][0], player_pos[1][0]
 
-    def locate_boxes(self) -> List[Pos]:
+    def locate_boxes(self) -> np.ndarray:
         """
         Locates the boxes in the map.
 
         Returns:
             List[Pos]: The positions of the boxes.
         """
-        box_pos = np.where((self.tiles == Tile.BOX) | (self.tiles == Tile.GOALBOX))
-        assert len(box_pos[0]) > 0, "There should be at least one box in the map."
-        return [(x, y) for x, y in zip(box_pos[0], box_pos[1])]
+        box_pos = np.array(np.where((self.tiles == Tile.BOX) | (self.tiles == Tile.GOALBOX)))
+        assert box_pos.shape[1]>0, "There should be at least one box in the map."
+        return box_pos.T
 
     def locate_goals(self) -> List[Pos]:
         """
@@ -106,9 +106,10 @@ class Map:
         Returns:
             List[Pos]: The positions of the goals.
         """
-        goal_pos = np.where((self.tiles == Tile.GOAL) | (self.tiles == Tile.GOALBOX) | (self.tiles == Tile.GOALPLAYER))
-        assert len(goal_pos[0]) > 0, "There should be at least one goal in the map."
-        return [(x, y) for x, y in zip(goal_pos[0], goal_pos[1])]
+        goal_pos = np.array(np.where((self.tiles == Tile.GOAL) |
+                                     (self.tiles == Tile.GOALBOX) | (self.tiles == Tile.GOALPLAYER)))
+        assert goal_pos.shape[1]>0, "There should be at least one goal in the map."
+        return goal_pos.T
 
     def get_tile(self, x: int, y: int) -> Tile:
         """
@@ -350,14 +351,12 @@ class Map:
             return True
         return False
     
-    def _manhatten_d(self, pos1: Pos, pos2: Pos) -> int:
-        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
-    
     def player_to_boxes(self) -> int:
         boxes = self.locate_boxes()
-        return min([self._manhatten_d((self.player_x, self.player_y), box) for box in boxes])
+        player = np.array((self.player_x, self.player_y)).reshape(1,2)
+        cost_matrix = self.cost_matrix(player, boxes)
+        return np.amin(cost_matrix).item()
     
-    def boxes_to_goals(self) -> int:
-        boxes = self.locate_boxes()
-        goals = self.locate_goals()
-        return sum([min([self._manhatten_d(box, goal) for goal in goals]) for box in boxes])
+    def cost_matrix(self, pos1: np.ndarray, pos2: np.ndarray) -> np.ndarray:
+        distances = np.abs(pos1[:, np.newaxis, :] - pos2[np.newaxis, :, :])
+        return distances.sum(axis=2)
