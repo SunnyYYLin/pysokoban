@@ -155,7 +155,7 @@ class SokobanProblem(HeuristicSearchProblem):
         - The heuristic value of the state.
 
         """
-        return 2 * map.boxes_to_goals() + 50*self._exists_dead_boxes(map) + map.player_to_boxes()
+        return 3*self._min_perfect_matching(map) + 10 * self._exists_dead_boxes(map) + map.player_to_boxes()
     
     def _min_perfect_matching(self, map: Map) -> int:
         """

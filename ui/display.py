@@ -2,6 +2,7 @@ import pygame
 import os
 from game.map import Tile, Map
 from enum import Enum, auto
+import logging
 
 pygame.init()
 TITLE_FONT = pygame.font.Font(None, 96)
@@ -109,7 +110,7 @@ class Display:
                 for text, ev in text_event.items():
                     if event.type == pygame.MOUSEBUTTONDOWN \
                         and text_rect[text].collidepoint(pygame.mouse.get_pos()):
-                        print(f"Clicked {ev}")
+                        logging.info(f"Selected {ev.name}")
                         return ev
                     
     def victory_menu(self, lvl_num: int) -> Event:

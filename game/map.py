@@ -75,7 +75,6 @@ class Map:
             for line in file:
                 tiles.append([_char_tiles[char] for char in line.rstrip('\n')])
         self.tiles = np.array(tiles, dtype=object)
-        print(f"Loaded map: \n{self}")
         return tuple(self.tiles.shape)
 
     def locate_player(self) -> Pos:
