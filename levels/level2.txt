@@ -1,5 +1,5 @@
-WWWWWWWW
-W  GGB W
-W BP B W
-W BGG  W
-WWWWWWWW
+########
+#  ..$ #
+# $@ $ #
+# $..  #
+########

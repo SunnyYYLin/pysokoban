@@ -1,14 +1,9 @@
-from game.map import Map
-from game.map import Tile
-import pygame
 from enum import Enum, auto
-from sealgo.sealgo_pkg.Problem import HeuristicSearchProblem, State, Action
-from os import path
 from typing import TypeAlias, List
-import numpy as np
-from functools import cache
-from copy import copy
 from scipy.optimize import linear_sum_assignment
+from sealgo.sealgo_pkg.Problem import HeuristicSearchProblem, Action
+
+from .map import Map
 
 class SokobanAction(Enum):
     UP = auto()

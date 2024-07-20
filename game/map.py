@@ -3,6 +3,7 @@ import numpy as np
 from enum import Enum, auto
 from typing import List
 import numpy as np
+import os
 
 class Tile(Enum):
     WALL = auto()
@@ -15,15 +16,24 @@ class Tile(Enum):
 
 Pos = tuple[int, int]
 _char_tiles = {
-    'W': Tile.WALL,
-    'B': Tile.BOX,
-    'Y': Tile.GOALBOX,
-    'X': Tile.GOALPLAYER,
-    'G': Tile.GOAL,
-    'P': Tile.PLAYER,
+    '#': Tile.WALL,
+    '$': Tile.BOX,
+    '+': Tile.GOALBOX,
+    '-': Tile.GOALPLAYER,
+    '.': Tile.GOAL,
+    '@': Tile.PLAYER,
     ' ': Tile.SPACE,
 }
-_tile_chars = {
+_tiles_char = {
+    Tile.WALL: '#',
+    Tile.BOX: '$',
+    Tile.GOALBOX: '+',
+    Tile.GOALPLAYER: '-',
+    Tile.GOAL: '.',
+    Tile.PLAYER: '@',
+    Tile.SPACE: ' ',
+}
+_tile_alphabet = {
     Tile.WALL: 'W',
     Tile.BOX: 'B',
     Tile.GOALBOX: 'Y',
@@ -32,8 +42,51 @@ _tile_chars = {
     Tile.PLAYER: 'P',
     Tile.SPACE: ' ',
 }
+_alphabet_tiles = {
+    'W': Tile.WALL,
+    'B': Tile.BOX,
+    'Y': Tile.GOALBOX,
+    'X': Tile.GOALPLAYER,
+    'G': Tile.GOAL,
+    'P': Tile.PLAYER,
+    ' ': Tile.SPACE,
+}
 
 class Map:
+    """
+    Represents a Sokoban game map.
+
+    Attributes:
+        tiles (np.ndarray): The array representing the map tiles.
+        scale (Pos): The dimensions of the map (width, height).
+        player_x (int): The x-coordinate of the player's position.
+        player_y (int): The y-coordinate of the player's position.
+
+    Methods:
+        __init__(self, level_file: str = ''): Initializes a Map object.
+        __str__(self) -> str: Returns a string representation of the map.
+        __hash__(self) -> int: Returns the hash value of the map.
+        __eq__(self, other: "Map") -> bool: Checks if two maps are equal.
+        __lt__(self, other: "Map") -> bool: Compares two maps.
+        __copy__(self) -> "Map": Copies the map.
+        _load(self, level_file: str) -> Pos: Loads the map from a level file.
+        locate_player(self) -> Pos: Locates the player in the map.
+        locate_boxes(self) -> np.ndarray: Locates the boxes in the map.
+        locate_goals(self) -> List[Pos]: Locates the goals in the map.
+        get_tile(self, x: int, y: int) -> Tile: Gets the tile at the specified position.
+        set_tile(self, x: int, y: int, tile: Tile) -> None: Sets the tile at the specified position.
+        is_wall(self, x: int, y: int) -> bool: Checks if the tile at the specified position is a wall.
+        is_box(self, x: int, y: int) -> bool: Checks if the tile at the specified position is a box.
+        is_goal(self, x: int, y: int) -> bool: Checks if the tile at the specified position is a goal.
+        is_space(self, x: int, y: int) -> bool: Checks if the tile at the specified position is a space.
+        is_blocked(self, x: int, y: int) -> bool: Checks if the tile at the specified position is blocked.
+        is_player(self, x: int, y: int) -> bool: Checks if the tile at the specified position is the player.
+        is_all_boxes_in_place(self) -> bool: Checks if all boxes are in their designated places.
+        set_to_goal(self) -> None: Sets all boxes to their designated places.
+        p_move(self, dx: int, dy: int) -> "Map": Moves the player in a given direction.
+        _push(self, x: int, y: int, dx: int, dy: int) -> bool: Pushes a box in a given direction.
+        is_deadlock(self, x: int, y: int) -> bool: Checks if the box at the specified position is in a deadlock.
+    """
     def __init__(self, level_file: str = ''):
         """
         Initializes a Map object. If the level file is provided, it loads the map from the file.
@@ -49,7 +102,7 @@ class Map:
             self.player_x, self.player_y = self.locate_player()
             
     def __str__(self) -> str:
-        return '\n'.join([''.join([str(_tile_chars[tile]) for tile in row]) for row in self.tiles])+'\n'
+        return '\n'.join([''.join([str(_tile_alphabet[tile]) for tile in row]) for row in self.tiles])+'\n'
     
     def __hash__(self) -> int:
         return hash(str(self))

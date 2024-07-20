@@ -1,83 +1,40 @@
 import pygame
 import os
-from game.map import Tile, Map
 from enum import Enum, auto
-import logging
+from typing import Dict, Tuple, TypeAlias
+from .input_handler import Event
+
+Point2D: TypeAlias = Tuple[int, int]
 
 pygame.init()
 TITLE_FONT = pygame.font.Font(None, 96)
 BUTTON_FONT = pygame.font.Font(None, 48)
-
-class Event(Enum):
-    START = auto()
-    RESTART = auto()
-    CONTINUE = auto()
-    EXIT = auto()
-    ASK_AI = auto()
-    RUN = auto()
     
 class State(Enum):
-    MAIN_MENU = auto()
     START_MENU = auto()
+    MAIN_MENU = auto()
     VICTORY_MENU = auto()
     GAMING = auto()
     
 class Display:
-    """
-    Represents the display for the Sokoban game.
-    
-    Attributes:
-        tile_size (int): The size of each tile in pixels.
-        scale (tuple): The scale of the display in pixels, calculated based on the map scale.
-        screen (pygame.Surface): The surface representing the game display.
-        image_paths (dict): A dictionary mapping tile types to their corresponding image paths.
-        images (dict): A dictionary mapping tile types to their corresponding loaded images.
-
-    Methods:
-        __init__(self, map: Map): Initializes the Display object.
-        load_images(self): Loads the images for each tile type.
-        render(self, map: Map): Renders the game map on the display.
-    """
-    def __init__(self, scale=(800, 600)):
-        """
-        Initializes the Display object.
-
-        Args:
-            map (Map): The map object representing the game map.
-        """
+    def __init__(self, icon_paths: str, scale: Point2D = (800, 600)):
         self.scale = scale
         self.screen = pygame.display.set_mode(self.scale)
         self.state = State.START_MENU
-        self.load_images()
+        self._load_images(icon_paths)
         pygame.display.set_caption("Sokoban")
 
-    def load_images(self):
-        """
-        Loads the images for each tile type.
-
-        Raises:
-            ValueError: If an image fails to load for a tile.
-        """
-        assets_path = "assets"
-        icon_style = "images"
-        self.image_paths = {
-            Tile.GOALBOX: os.path.join(assets_path, icon_style, "goalbox.png"),
-            Tile.GOALPLAYER: os.path.join(assets_path, icon_style, "goalplayer.png"),
-            Tile.BOX: os.path.join(assets_path, icon_style, "box.png"),
-            Tile.GOAL: os.path.join(assets_path, icon_style, "goal.png"),
-            Tile.WALL: os.path.join(assets_path, icon_style, "wall.png"),
-            Tile.PLAYER: os.path.join(assets_path, icon_style, "player.png"),
-            Tile.SPACE: os.path.join(assets_path, icon_style, "space.png"),
-        }
+    def _load_images(self, icon_paths: str) -> None:
+        self.icon_paths = icon_paths
         self.images = {}
-        for tile, path in self.image_paths.items():
+        for tile, path in self.icon_paths.items():
             try:
                 self.images[tile] = pygame.image.load(path)
             except:
-                print(f"Failed to load image for tile {tile}")
+                print(f"Failed to load image for tile {tile.name}")
                 self.images[tile] = None
 
-    def render(self, map) -> Event:
+    def render(self, map) -> Tuple[dict, dict]:
         self.tile_size = min(self.scale[0] // map.scale[1], self.scale[1] // map.scale[0])
         self.screen.fill((0, 0, 0))
         for y, row in enumerate(map.tiles):
@@ -87,33 +44,20 @@ class Display:
                     scaled_image = pygame.transform.scale(image, (self.tile_size, self.tile_size))
                     self.screen.blit(scaled_image, (x * self.tile_size, y * self.tile_size))
         pygame.display.flip()
-        return Event.RUN
+        return {}, {}
     
-    def _show(self, text_pos, text_event) -> Event:
+    def _show(self, text_pos: Dict[pygame.Surface, Point2D]) -> Dict[pygame.Surface, pygame.Rect]:
         text_rect = {text:text.get_rect(
             center=(self.scale[0] * text_pos[text][0], self.scale[1] * text_pos[text][1]))
                      for text in text_pos.keys()}
-        while True:
-            self.screen.fill((0, 0, 0))
-            for text, rect in text_rect.items():
-                self.screen.blit(text, rect)
-            pygame.display.flip()
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return Event.EXIT
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                    return Event.START
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_a:
-                    return Event.ASK_AI
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                    return Event.RESTART
-                for text, ev in text_event.items():
-                    if event.type == pygame.MOUSEBUTTONDOWN \
-                        and text_rect[text].collidepoint(pygame.mouse.get_pos()):
-                        logging.info(f"Selected {ev.name}")
-                        return ev
+        self.screen.fill((0, 0, 0))
+        for text, rect in text_rect.items():
+            self.screen.blit(text, rect)
+        pygame.display.flip()
+        return text_rect
                     
-    def victory_menu(self, lvl_num: int) -> Event:
+    def victory_menu(self, lvl_num: int) \
+        -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
         victory_text = TITLE_FONT.render(f"Level {lvl_num} Complete!", True, (255, 255, 255))
         next_text = BUTTON_FONT.render("Next Level", True, (255, 255, 255))
         exit_text = BUTTON_FONT.render("Exit", True, (255, 255, 255))
@@ -126,30 +70,31 @@ class Display:
             next_text: (0.5, 0.6),
             exit_text: (0.5, 0.7)
         }
-        return self._show(text_pos, text_event)
+        text_rect = self._show(text_pos)
+        return text_rect, text_event
                     
-    def start_menu(self) -> Event:
+    def start_menu(self) \
+        -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
         title_text = TITLE_FONT.render("Sokoban", True, (255, 255, 255))
         start_text = BUTTON_FONT.render("Start Game", True, (255, 255, 255))
+        generate_text = BUTTON_FONT.render("Generate Level", True, (255, 255, 255))
         exit_text = BUTTON_FONT.render("Exit", True, (255, 255, 255))
         text_event = {
             start_text: Event.START,
+            generate_text: Event.GENERATE,
             exit_text: Event.EXIT
         }
         text_pos = {
             title_text: (0.5, 0.2),
             start_text: (0.5, 0.4),
-            exit_text: (0.5, 0.5)
+            generate_text: (0.5, 0.5),
+            exit_text: (0.5, 0.6)
         }
-        return self._show(text_pos, text_event)
+        text_rect = self._show(text_pos)
+        return text_rect, text_event
                     
-    def main_menu(self, lvl_num: int) -> Event:
-        """
-        Displays the main menu.
-
-        Returns:
-            Event: The event corresponding to the user's selection
-        """
+    def main_menu(self, lvl_num: int) \
+        -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
         title_text = TITLE_FONT.render(f"Level {lvl_num}", True, (255, 255, 255))
         start_text = BUTTON_FONT.render("Continue", True, (255, 255, 255))
         restart_text = BUTTON_FONT.render("Restart", True, (255, 255, 255))
@@ -168,9 +113,11 @@ class Display:
             ai_text: (0.5, 0.5),
             exit_text: (0.5, 0.6)
         }
-        return self._show(text_pos, text_event)
+        text_rect = self._show(text_pos)
+        return text_rect, text_event
                     
-    def run(self, map: map, lvl_num: int) -> Event:
+    def run(self, map: map, lvl_num: int) \
+        -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
         match self.state:
             case State.GAMING:
                 return self.render(map)

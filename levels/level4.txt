@@ -1,8 +1,8 @@
-WWWWWW  
-WW   WWW
-W  W   W
-W W  W W
-W B BW W
-WGW    W
-WG PWWWW
-WWWWW   
+######  
+##   ###
+#  #   #
+# #  # #
+# $ $# #
+#.#    #
+#. @####
+#####   

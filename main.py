@@ -10,6 +10,7 @@ def main():
     parser.add_argument("--test", action="store_true", help="Run the game in test mode")
     parser.add_argument("--level", type=int, default=1, help="Specify the starting level")
     parser.add_argument("--log-file", type=str, default="sokoban.log", help="Specify the log file")
+    parser.add_argument("--icon-style", type=str, default="image_v1", help="Specify the icon style")
     args = parser.parse_args()
     
     if not os.path.exists('logs'):
@@ -21,7 +22,7 @@ def main():
                             logging.StreamHandler()
                         ])
     pygame.init()
-    game = Game(args.level)
+    game = Game(args.level, args.icon_style)
     if args.test:
         game.test()
     else:

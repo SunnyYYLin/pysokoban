@@ -8,15 +8,15 @@ class SokobanLevelScraper:
         self.url = url
         self.output_dir = output_dir
         self.img_to_char = {
-            "p_wall.gif": 'W',
-            "p_goal.gif": 'G',
-            "p_box.gif": 'B',
-            "p_player.gif": 'P',
-            "p_box_on_goal.gif": 'Y',
+            "p_wall.gif": '#',
+            "p_goal.gif": '.',
+            "p_box.gif": '$',
+            "p_player.gif": '@',
+            "p_box_on_goal.gif": '+',
+            "p_player_on_goal.gif": '-',
             "p_floor.gif": ' '
         }
 
-        # 创建输出目录
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 

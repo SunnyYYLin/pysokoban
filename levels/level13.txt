@@ -1,7 +1,7 @@
-WWWWWWWW
-W  W   W
-W BGGB W
-WPBGY WW
-W BGGB W
-W  W   W
-WWWWWWWW
+########
+#  #   #
+# $..$ #
+#@$.+ ##
+# $..$ #
+#  #   #
+########
