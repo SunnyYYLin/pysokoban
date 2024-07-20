@@ -99,8 +99,7 @@ class Game:
             
     def test(self, end_lvl: int = 20):
         start_lvl = self.lvl_num
-        for lvl_num in range(start_lvl, end_lvl):
-            self.lvl_num += 1
+        for lvl_num in range(start_lvl, end_lvl + 1):
             self._load_level(lvl_num)
             problem = SokobanProblem(self.map)
             start_time = os.times()
@@ -109,7 +108,8 @@ class Game:
                 ai = AI(problem)
                 solutions = ai.search()
             finish_time = os.times()
-            elapsed_time = finish_time.elapsed - start_time.elapsed  
+            elapsed_time = finish_time.elapsed - start_time.elapsed
+            self.lvl_num += 1
             logging.info(f"Level {lvl_num}: Solution found in {elapsed_time:.2f} seconds.")
             logging.info(f"Solution length: {[len(solution) for solution in solutions]}")
             

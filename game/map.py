@@ -357,6 +357,12 @@ class Map:
         cost_matrix = self.cost_matrix(player, boxes)
         return np.amin(cost_matrix).item()
     
+    def boxes_to_goals(self) -> int:
+        boxes = self.locate_boxes()
+        goals = self.locate_goals()
+        cost_matrix = self.cost_matrix(boxes, goals)
+        return np.amin(cost_matrix, axis=0).sum().item()
+    
     def cost_matrix(self, pos1: np.ndarray, pos2: np.ndarray) -> np.ndarray:
         distances = np.abs(pos1[:, np.newaxis, :] - pos2[np.newaxis, :, :])
         return distances.sum(axis=2)
