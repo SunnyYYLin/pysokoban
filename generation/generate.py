@@ -248,7 +248,7 @@ class Generate_map:
             
             
         if self.map.is_space(x, y) and self.frozen == 1 :
-            self.map.tiles[x][y]='B'
+            self.map.set_tile(x, y, Tile.BOX)
             return True
         return False
     
