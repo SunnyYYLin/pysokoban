@@ -150,7 +150,7 @@ class Generate_map:
             return False
         if self.frozen == 2:
             if self.new_map.is_wall(new_x, new_y):
-                print('1')#!!!!!!死循环？？？？？？？？？？？？？？？？？
+                print('1')#!!!!!!死循环？？？？？？？？？？？？？？？？？循环原因已经找到，生成大量箱子可能会把周围堵死，需要重开
                 return False
             if self.new_map.is_box(new_x, new_y):
                 if self.push(new_x, new_y, dx, dy):
