@@ -125,7 +125,7 @@ class Generate_map:
         return False
 
     def leave(self) -> bool:
-        self.map.set_tile(self.x, self.y, ' ')
+        self.map.set_tile(self.x, self.y, Tile.SPACE)
         return True
 
     def push(self, x: int, y: int, dx: int, dy: int) -> bool:
