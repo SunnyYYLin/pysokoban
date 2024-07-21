@@ -1,16 +1,8 @@
-from __future__ import annotations
-from copy import deepcopy
-from game.map import Map
-import pygame
-import sys
+from game.map import Map, Tile
 import numpy as np
-import random
-import game.mcts
-
-
+from . import mcts
 
 class Generate_map:
-
     def __init__(self,
                  width: int=4,
                  height: int=4,
@@ -20,7 +12,7 @@ class Generate_map:
         if generate:
             self.map = Map()
             self.map.tiles = np.full((width, height),
-                                     fill_value='W',
+                                     fill_value=Tile.WALL,
                                      dtype=object)
             self.map.scale = self.map.tiles.shape
             self.width = width
@@ -28,7 +20,7 @@ class Generate_map:
 
             self.x = np.random.randint(0, width)
             self.y = np.random.randint(0, height)
-            self.map.tiles[self.x][self.y] = 'P'
+            self.map.set_tile(self.x, self.y, Tile.PLAYER)
 ################################################################为了防止不良结果出现
             self.currentplayer = 1
             self.iter_limits = int(width * height * rate)
@@ -43,7 +35,7 @@ class Generate_map:
     def restart(self):
             self.map = Map()
             self.map.tiles = np.full((self.width, self.height),
-                                     fill_value='W',
+                                     fill_value=Tile.WALL,
                                      dtype=object)
             self.map.scale = self.map.tiles.shape
             self.frozen = 0
@@ -54,7 +46,7 @@ class Generate_map:
             
             self.x = np.random.randint(0, self.map.scale[0])
             self.y = np.random.randint(0, self.map.scale[1])
-            self.map.tiles[self.x][self.y] = 'P'
+            self.map.is_player(self.x, self.y)
             
             self.new_map = self.map
             
@@ -121,7 +113,7 @@ class Generate_map:
         for x in range(self.map.scale[0]):
             for y in range(self.map.scale[1]):
                 pos = (x, y)
-                if self.map.tiles[x][y] == ' ':
+                if self.map.is_space(x, y):
                     self.map.spacelist.append(pos)
         if len(self.map.spacelist)<25:   #magic
             pass
@@ -143,11 +135,11 @@ class Generate_map:
         
         if new_x < 0 or new_y < 0 or new_x >= self.map.scale[0] or new_y >= self.map.scale[1]:
             return False
-        if self.new_map.tiles[new_x][new_y]=='W' or self.new_map.tiles[new_x][new_y]=='B':
+        if self.new_map.is_wall(new_x, new_y) or self.new_map.is_box(new_x, new_y)=='B':
             return False
 
-        self.new_map.set_tile(x, y, ' ')
-        self.new_map.set_tile(new_x, new_y, 'B')
+        self.new_map.set_tile(x, y, Tile.SPACE)
+        self.new_map.set_tile(new_x, new_y, Tile.BOX)
         print("push()")
         return True
 
@@ -158,19 +150,19 @@ class Generate_map:
                 0] or new_y >= self.map.scale[1]:
             return False
         if self.frozen == 2:
-            if self.new_map.tiles[new_x][new_y]=='W':
+            if self.new_map.is_wall(new_x, new_y):
                 print('1')#!!!!!!死循环？？？？？？？？？？？？？？？？？
                 return False
-            if self.new_map.tiles[new_x][new_y]=='B':
+            if self.new_map.is_box(new_x, new_y):
                 if self.push(new_x, new_y, dx, dy):
                     print('2')
                     return self.move(dx, dy)
                 return False
-            elif self.new_map.tiles[new_x][new_y]==' ':
-                self.new_map.tiles[self.x][self.y] =' '
+            elif self.new_map.is_space(new_x, new_y):
+                self.new_map.set_tile(self.x, self.y, Tile.SPACE)
                 self.x = new_x
                 self.y = new_y
-                self.new_map.tiles[self.x][self.y] = 'P'
+                self.new_map.tiles[self]
                 self.move_time+=1###################################################
                 #(self.new_map.tiles)
 
@@ -178,7 +170,7 @@ class Generate_map:
             self.leave()
             self.x = new_x
             self.y = new_y
-            self.map.tiles[self.x][self.y] = 'P'
+            self.map.set_tile(self.x, self.y, Tile.PLAYER)
         return True
 
     def end_all(self) -> bool:
@@ -186,11 +178,11 @@ class Generate_map:
         if self.terminal==True:
             print('true')
             return False
-        if self.new_map.tiles[self.player_x][self.player_y] == 'B':
+        if self.new_map.is_box(self.player_x, self.player_y):
             print('冲突')################################################
             self.restart
             return False
-        if   self.move_time>900:##magic
+        if self.move_time>900:##magic
             self.terminal = True
         #print('end all')
         #print(self.map.tiles)
@@ -211,16 +203,14 @@ class Generate_map:
     def remove_boxes(self):
         for x in range(self.map.scale[0]):
             for y in range(self.map.scale[1]):
-                if self.map.tiles[x][y] == 'B' and self.new_map.tiles[x][
-                        y] == 'B':
-                    self.map.tiles[x][y] = 'W'
+                if self.map.is_box(x, y) and self.map.is_box(x, y):
+                    self.map.is_wall(x, y)
 
     def set_goals(self):
         for x in range(self.map.scale[0]):
             for y in range(self.map.scale[1]):
-                if self.map.tiles[x][y] == ' ' and self.new_map.tiles[x][
-                        y] == 'B':
-                    self.map.tiles[x][y] = 'G'
+                if self.map.tiles[x][y] == ' ' and self.map.is_box(x, y):
+                    self.map.is_goal(x, y)
 
     def __copy__(self) -> "Map":
         self.new_map = Map()
@@ -235,7 +225,7 @@ class Generate_map:
         for x in range(self.map.scale[0]):
             for y in range(self.map.scale[1]):
                 pos = (x, y)
-                if self.map.tiles[x][y] == 'B':
+                if self.map.is_box(x, y):
                     self.boxlist.append(pos)
         if self.frozen == 1 and len(self.boxlist) > 6:#magic
             self.frozen = 2
@@ -249,7 +239,7 @@ class Generate_map:
         for i in range(self.map.scale[0]):
             for j in range(self.map.scale[1]):
                 pos = (i, j)
-                if self.map.tiles[i][j] == 'B':
+                if self.map.is_box(i, j):
                     self.boxlist.append(pos)
         if self.frozen == 1 and len(self.boxlist) >= 8:#magic
             self.frozen = 2
@@ -268,12 +258,11 @@ class Generate_map:
         for x in range(self.map.scale[0]):
             for y in range(self.map.scale[1]):
                 pos = (x, y)
-                if self.map.tiles[x][y] == 'B':
+                if self.map.is_box(x, y):
                     self.boxlist.append(pos)
 
 
 class Value:
-
     def __init__(self, map):
         self.map = map
         self.boxlist = []
@@ -294,9 +283,9 @@ class Value:
         for x in range(map.scale[0]):
             for y in range(map.scale[1]):
                 pos = (x, y)
-                if map.tiles[x][y] == 'G':
+                if map.is_goal(x, y):
                     self.goallist.append(pos)
-                elif map.tiles[x][y] == 'B':
+                elif map.is_box(x, y):
                     self.boxlist.append(pos)
 
     def box_num(self, map, x_1, y_1, x_2, y_2) -> int:
@@ -307,7 +296,7 @@ class Value:
         num = 0
         for x in range(x_1, x_2 + 1):
             for y in range(y_1, y_2 + 1):
-                if map.tiles[x][y] == 'B':
+                if map.is_box(x, y):
                     num += 1
         return num
 
@@ -319,7 +308,7 @@ class Value:
         num = 0
         for x in range(x_1, x_2 + 1):
             for y in range(y_1, y_2 + 1):
-                if map.tiles[x][y] == 'G':
+                if map.is_goal(x, y):
                     num += 1
         return num
 
@@ -331,7 +320,7 @@ class Value:
         num = 0
         for x in range(x_1, x_2 + 1):
             for y in range(y_1, y_2 + 1):
-                if map.tiles[x][y] == 'W':
+                if map.is_wall(x, y):
                     num += 1
         return num
 
@@ -365,7 +354,7 @@ class Value:
         n = 0
         for dx, dy in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1),
                        (1, 0), (1, 1)]:
-            if map.tiles[x + dx][y + dy] == 'W':
+            if map.is_wall(x + dx, y + dy):
                 n += 1
             elif map.tiles[x + dx][y + dy] == ' ':
                 n -= 1
