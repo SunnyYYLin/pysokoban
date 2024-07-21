@@ -4,6 +4,7 @@ from enum import Enum, auto
 from typing import List
 import numpy as np
 import os
+from copy import copy
 
 class Tile(Enum):
     WALL = auto()
@@ -63,13 +64,6 @@ class Map:
         player_y (int): The y-coordinate of the player's position.
 
     Methods:
-        __init__(self, level_file: str = ''): Initializes a Map object.
-        __str__(self) -> str: Returns a string representation of the map.
-        __hash__(self) -> int: Returns the hash value of the map.
-        __eq__(self, other: "Map") -> bool: Checks if two maps are equal.
-        __lt__(self, other: "Map") -> bool: Compares two maps.
-        __copy__(self) -> "Map": Copies the map.
-        _load(self, level_file: str) -> Pos: Loads the map from a level file.
         locate_player(self) -> Pos: Locates the player in the map.
         locate_boxes(self) -> np.ndarray: Locates the boxes in the map.
         locate_goals(self) -> List[Pos]: Locates the goals in the map.
@@ -84,8 +78,8 @@ class Map:
         is_all_boxes_in_place(self) -> bool: Checks if all boxes are in their designated places.
         set_to_goal(self) -> None: Sets all boxes to their designated places.
         p_move(self, dx: int, dy: int) -> "Map": Moves the player in a given direction.
-        _push(self, x: int, y: int, dx: int, dy: int) -> bool: Pushes a box in a given direction.
         is_deadlock(self, x: int, y: int) -> bool: Checks if the box at the specified position is in a deadlock.
+        
     """
     def __init__(self, level_file: str = ''):
         """
@@ -105,7 +99,7 @@ class Map:
         return '\n'.join([''.join([str(_tile_alphabet[tile]) for tile in row]) for row in self.tiles])+'\n'
     
     def __hash__(self) -> int:
-        return hash(str(self))
+        return hash(self.tiles.tobytes())
     
     def __eq__(self, other: "Map") -> bool:
         return np.array_equal(self.tiles, other.tiles)
@@ -144,20 +138,20 @@ class Map:
     def locate_boxes(self) -> np.ndarray:
         """
         Locates the boxes in the map.
-
+        
         Returns:
-            List[Pos]: The positions of the boxes.
+            np.ndarray: The positions of the boxes.
         """
         box_pos = np.array(np.where((self.tiles == Tile.BOX) | (self.tiles == Tile.GOALBOX)))
         assert box_pos.shape[1]>0, "There should be at least one box in the map."
         return box_pos.T
 
-    def locate_goals(self) -> List[Pos]:
+    def locate_goals(self) -> np.ndarray:
         """
         Locates the goals in the map.
-
+        
         Returns:
-            List[Pos]: The positions of the goals.
+            np.ndarray: The positions of the goals.
         """
         goal_pos = np.array(np.where((self.tiles == Tile.GOAL) |
                                      (self.tiles == Tile.GOALBOX) | (self.tiles == Tile.GOALPLAYER)))
@@ -347,6 +341,21 @@ class Map:
         self.player_x += dx
         self.player_y += dy
         return self
+    
+    def can_push(self, x: int, y: int, dx: int, dy: int) -> bool:
+        """
+        Checks if a box can be pushed in a given direction.
+
+        Args:
+        - x: The x-coordinate of the box.
+        - y: The y-coordinate of the box.
+        - dx: The change in x-coordinate.
+        - dy: The change in y-coordinate.
+
+        Returns:
+        - True if the box can be pushed, False otherwise.
+        """
+        return not (self.is_blocked(x+dx, y+dy) or self.is_blocked(x-dx, y-dy))
 
     def _push(self, x: int, y: int, dx: int, dy: int) -> bool:
         """
@@ -360,15 +369,13 @@ class Map:
 
         Returns:
         - True if the box can be pushed, False otherwise.
-
         """
+        if not self.can_push(x, y, dx, dy):
+            return False
+        
         new_x = x + dx
         new_y = y + dy
-        # assert self.is_box(x, y), "Only boxes can be pushed."
         
-        # check if the box can be pushed
-        if self.is_wall(new_x, new_y) or self.is_box(new_x, new_y):
-            return False
         # push off
         if self.is_goal(x, y):
             self.set_tile(x, y, Tile.GOAL)
@@ -381,41 +388,65 @@ class Map:
             self.set_tile(new_x, new_y, Tile.BOX)
         return True
     
-    def is_deadlock(self, x: int, y: int) -> bool:
+    def count_deadlock(self) -> int:
         """
-        Checks if the box at the specified position is in a deadlock.
-
-        Args:
-            x (int): The x-coordinate of the box.
-            y (int): The y-coordinate of the box.
-
+        Counts the number of boxes in deadlock.
+        
         Returns:
-            bool: True if the box is in a deadlock, False otherwise.
+            int: The number of boxes in deadlock.
         """
-        if self.is_goal(x, y):
-            return False
-        if self.is_blocked(x - 1, y) and self.is_blocked(x, y - 1):
-            return True
-        if self.is_blocked(x - 1, y) and self.is_blocked(x, y + 1):
-            return True
-        if self.is_blocked(x + 1, y) and self.is_blocked(x, y - 1):
-            return True
-        if self.is_blocked(x + 1, y) and self.is_blocked(x, y + 1):
-            return True
-        return False
+        boxes = self.locate_boxes()
+        map = copy(self)
+        while np.any(boxes):
+            to_delete = []
+            for i, (x, y) in enumerate(boxes):
+                if (map.can_push(x, y, -1, 0) or
+                    map.can_push(x, y, 1, 0) or
+                    map.can_push(x, y, 0, -1) or
+                    map.can_push(x, y, 0, 1)):
+                    map.set_tile(x, y, Tile.SPACE)
+                    to_delete.append(i)
+            if len(to_delete) == 0:
+                return boxes.shape[0]
+            if len(to_delete) == boxes.shape[0]:
+                return 0
+            boxes = np.delete(boxes, to_delete, axis=0)
+        return boxes.shape[0]
     
     def player_to_boxes(self) -> int:
+        """
+        Calculates the minimum cost for the player to reach the boxes.
+
+        Returns:
+            int: The minimum cost for the player to reach the boxes.
+        """
         boxes = self.locate_boxes()
         player = np.array((self.player_x, self.player_y)).reshape(1,2)
         cost_matrix = self.cost_matrix(player, boxes)
         return np.amin(cost_matrix).item()
     
     def boxes_to_goals(self) -> int:
+        """
+        Calculates the sum of minimum cost of moving boxes to goals.
+
+        Returns:
+            int: The sum of minimum cost of moving boxes to goals.
+        """
         boxes = self.locate_boxes()
         goals = self.locate_goals()
         cost_matrix = self.cost_matrix(boxes, goals)
         return np.amin(cost_matrix, axis=0).sum().item()
     
     def cost_matrix(self, pos1: np.ndarray, pos2: np.ndarray) -> np.ndarray:
+        """
+        Calculates the cost matrix between two sets of positions.
+
+        Args:
+            pos1 (np.ndarray): The first set of positions.
+            pos2 (np.ndarray): The second set of positions.
+
+        Returns:
+            np.ndarray: The cost matrix representing the distances between each pair of positions.
+        """
         distances = np.abs(pos1[:, np.newaxis, :] - pos2[np.newaxis, :, :])
         return distances.sum(axis=2)

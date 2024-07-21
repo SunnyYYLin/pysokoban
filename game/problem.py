@@ -1,7 +1,7 @@
 from enum import Enum, auto
 from typing import TypeAlias, List
 from scipy.optimize import linear_sum_assignment
-from sealgo.sealgo_pkg.Problem import HeuristicSearchProblem, Action
+from sealgo.sealgo.Problem import HeuristicSearchProblem, Action
 
 from .map import Map
 
@@ -150,7 +150,7 @@ class SokobanProblem(HeuristicSearchProblem):
         - The heuristic value of the state.
 
         """
-        return 3*self._min_perfect_matching(map) + 5*self._exists_dead_boxes(map) + map.player_to_boxes()
+        return 3*self._min_perfect_matching(map) + 10*map.count_deadlock() + map.player_to_boxes()
     
     def _min_perfect_matching(self, map: Map) -> int:
         """
@@ -167,16 +167,3 @@ class SokobanProblem(HeuristicSearchProblem):
         cost_matrix = map.cost_matrix(boxes, goals)
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
         return cost_matrix[row_ind, col_ind].sum()
-    
-    def _exists_dead_boxes(self, map: State) -> int:
-        """
-        Calculates the number of dead boxes in the map.
-
-        Args:
-            state (Map): The current state of the Sokoban problem.
-
-        Returns:
-            int: The heuristic value.
-        """
-        boxes = map.locate_boxes()
-        return sum(map.is_deadlock(box[0], box[1]) for box in boxes)

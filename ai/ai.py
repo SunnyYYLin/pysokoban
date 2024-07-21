@@ -1,6 +1,6 @@
-from sealgo.sealgo_pkg.Problem import SearchProblem
+from sealgo.sealgo.Problem import SearchProblem
 from game.problem import SokobanAction as A
-import sealgo.sealgo_pkg.BestFirstSearch as BFS
+import sealgo.sealgo.BestFirstSearch as BFS
 
 class ToyAI():
     def __init__(self, problem: SearchProblem):

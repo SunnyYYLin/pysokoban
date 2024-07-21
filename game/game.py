@@ -21,11 +21,30 @@ key_actions = {
 assets_path = "assets"
 
 class Game:
+    """
+    Represents the Sokoban game.
+
+    Attributes:
+        lvl_num (int): The current level number.
+        input_handler (InputHandler): The input handler object.
+        display (Display): The display object.
+        running (bool): Flag indicating if the game is running.
+        map (Map): The game map object.
+
+    Methods:
+        run(self, start_level=1): Runs the game.
+        test(self, end_lvl: int = 20): Runs a test on multiple levels.
+    """
+
     def __init__(self, lvl_num: int = 0, icon_style: str = "image_v1"):
         """
         Initializes the Game object.
 
         It sets the initial level number, loads the first level, display, and input handler objects.
+
+        Args:
+            lvl_num (int): The initial level number. Default is 0.
+            icon_style (str): The style of the game icons. Default is "image_v1".
         """
         self.lvl_num = lvl_num
         self.input_handler = InputHandler(key_actions)
@@ -42,21 +61,39 @@ class Game:
         self.running = True
         self.map = Map()
         logging.info(f"Game initialized at {datetime.now()}")
-        
+
     def _load_level(self, lvl_num: int) -> None:
+        """
+        Loads a level.
+
+        Args:
+            lvl_num (int): The level number to load.
+        """
         levels_folder = "levels"
         map = Map(os.path.join(levels_folder, f"level{lvl_num}.txt"))
         self.problem = SokobanProblem(map)
         self.map = self.problem.initial_state()
 
     def run(self, start_level=1):
+        """
+        Runs the game.
+
+        Args:
+            start_level (int): The level number to start from. Default is 1.
+        """
         clock = pygame.time.Clock()
         self.lvl_num = start_level - 1
         while self.running:
             self._handle_event()
             clock.tick(60)
-            
+
     def test(self, end_lvl: int = 20):
+        """
+        Runs a test on multiple levels.
+
+        Args:
+            end_lvl (int): The last level number to test. Default is 20.
+        """
         start_lvl = self.lvl_num
         for lvl_num in range(start_lvl, end_lvl + 1):
             self._load_level(lvl_num)
@@ -71,8 +108,11 @@ class Game:
             self.lvl_num += 1
             logging.info(f"Level {lvl_num}: Solution found in {elapsed_time:.2f} seconds.")
             logging.info(f"Solution length: {[len(solution) for solution in solutions]}")
-            
+
     def _handle_event(self):
+        """
+        Handles game events.
+        """
         text_rect, text_event = self.display.run(self.map, self.lvl_num)
         input = self.input_handler.handle_inputs(text_rect, text_event)
         match self.display.state:
@@ -86,12 +126,12 @@ class Game:
                 self._handle_victory_menu(input)
             case _:
                 raise ValueError(f"Invalid state: {self.display.state}")
-    
+
     def _handle_start_menu(self, input: Event) -> None:
         """
-        Handles the start menu events.
-        
-        Arges:
+        Handles start menu events.
+
+        Args:
             input (Event): The event to handle.
         """
         match input:
@@ -106,7 +146,7 @@ class Game:
 
     def _handle_main_menu(self, input: Event) -> None:
         """
-        Handles the main menu events.
+        Handles main menu events.
 
         Args:
             input (Event): The event to handle.
@@ -139,10 +179,10 @@ class Game:
             case Event.EXIT:
                 pygame.quit()
                 quit()
-                
+
     def _handle_gaming(self, input: SokobanAction) -> None:
         """
-        Handles the gaming events.
+        Handles gaming events.
 
         Args:
             input (SokobanAction): The action to handle.
@@ -158,10 +198,10 @@ class Game:
             case Event.EXIT:
                 pygame.quit()
                 quit()
-                
+
     def _handle_victory_menu(self, input: Event) -> None:
         """
-        Handles the victory menu events.
+        Handles victory menu events.
 
         Args:
             input (Event): The event to handle.
