@@ -1,6 +1,8 @@
 from game.map import Map, Tile
 import numpy as np
 from copy import deepcopy
+from generate.mcts import mcts
+from ui.display import Display
 
 class Generate_map:
     def __init__(self,x,y,map:Map,frozen=0,terminal=False) -> None:
@@ -363,3 +365,51 @@ class Value:
             elif map.is_space(x + dx, y + dy):
                 n -= 1
         return not (n == 8 or n == -8)
+
+def generate_map(width=4,height=4):
+        
+    map=Map()
+    map.tiles = np.full((4, 4),fill_value=Tile.WALL,dtype=object)
+    map.scale = map.tiles.shape
+    x,y=2,2
+    
+    initialState = Generate_map(x=x,y=y,map=map)
+    
+    display=Display()
+    
+    searcher = mcts(iterationLimit=2)    
+    next_state=initialState
+    all_time=0
+    while(not next_state.isTerminal()):
+        
+        
+        next_state.init_frozen=next_state.frozen
+        next_state.init_terminal=next_state.terminal
+        next_state.init_x=next_state.x
+        next_state.init_y=next_state.y
+        next_state.init_map=next_state.map
+        
+        next_state.init_count_a=next_state.count_a
+        next_state.init_move_time=next_state.move_time
+        
+        action = searcher.search(initialState=next_state)
+        
+        next_state.init_frozen=0
+        next_state.init_terminal=False
+        next_state.init_x=x
+        next_state.init_y=y
+        next_state.init_map=map
+        next_state.init_count_a=0
+        next_state.init_move_time=0
+        
+        
+        next_state=next_state.takeAction(action)
+        display.render(next_state.map)
+        
+        all_time+=1
+        print(action)
+        print(all_time)
+        print(next_state.map.tiles)
+        
+    display.render(next_state.map)
+    return next_state
