@@ -26,6 +26,7 @@ class Generate_map:
             self.iter_times = 0
             self.a=False
             self.move_time = 0
+            self.count_a=0
 
             self.frozen = 0             #0表示随机游走，1表示放置箱子，2表示模拟游戏
             self.terminal = False       #表示是否结束状态
@@ -42,6 +43,7 @@ class Generate_map:
             self.iter_times = 0
             self.a=False
             self.move_time = 0
+            self.count_a=0
             
             self.x = np.random.randint(0, self.map.scale[0])
             self.y = np.random.randint(0, self.map.scale[1])
@@ -89,7 +91,7 @@ class Generate_map:
         #判断是否进入结束状态，对齐mcts库的接口
         #!!!为了防止直接进入终止加入的判断，理论上不需要这一部分
         if self.terminal:
-            print('terminal')
+            #'terminal')
             #input()
             print('isterminal')
             print(self.map.tiles)
@@ -101,6 +103,8 @@ class Generate_map:
         #计算激励，对齐库的接口
         value = Value(map=self.map)
         reward = value.reward
+        self.restart()
+        self.terminal = False
         print('reward')
         print(reward)
         return reward
@@ -114,7 +118,7 @@ class Generate_map:
                 pos = (x, y)
                 if self.map.is_space(x, y):
                     self.map.spacelist.append(pos)
-        if len(self.map.spacelist)<25:   #magic
+        if len(self.map.spacelist)<12:   #magic
             pass
         #!!!!!
         else:
@@ -139,7 +143,7 @@ class Generate_map:
 
         self.new_map.set_tile(x, y, Tile.SPACE)
         self.new_map.set_tile(new_x, new_y, Tile.BOX)
-        print("push()")
+        #"push()")
         return True
 
     def move(self, dx, dy) -> bool:
@@ -150,12 +154,19 @@ class Generate_map:
             return False
         if self.frozen == 2:
             if self.new_map.is_wall(new_x, new_y):
-                print('1')#!!!!!!死循环？？？？？？？？？？？？？？？？？循环原因已经找到，生成大量箱子可能会把周围堵死，需要重开
+                #print('1')#!!!!!!死循环？？？？？？？？？？？？？？？？？
+                self.count_a +=1
+                if self.count_a>30:#magic
+                    self.restart()
                 return False
             if self.new_map.is_box(new_x, new_y):
                 if self.push(new_x, new_y, dx, dy):
-                    print('2')
+                    #print('2')
                     return self.move(dx, dy)
+                else :
+                    self.count_a +=1
+                    if self.count_a>30:#magic
+                        self.restart()
                 return False
             elif self.new_map.is_space(new_x, new_y):
                 self.new_map.set_tile(self.x, self.y, Tile.SPACE)
@@ -173,43 +184,39 @@ class Generate_map:
         return True
 
     def end_all(self) -> bool:
-        
-        if self.terminal==True:
-            print('true')
-            return False
         if self.new_map.is_box(self.player_x, self.player_y):
-            print('冲突')################################################
+            #print('冲突')################################################
             self.restart()
             return False
-        if self.move_time>900:##magic
+        if self.move_time>200:##magic
             self.terminal = True
         #print('end all')
         #print(self.map.tiles)
             self.remove_boxes()
             self.set_goals()
-            print('generated_all')
-            print(self.map.tiles)
-            print('frozen')
-            print(self.frozen)
-            self.frozen=3
+            #print('generated_all')
+            #print(self.map.tiles)
+            #print('frozen')
+            #print(self.frozen)
+            self.frozen=0
             self.get_list()
             if len(self.boxlist)<=2:
                 self.restart()
-                print('重开')
-                input()
+                #rint('重开')
+                
             return True
 
     def remove_boxes(self):
         for x in range(self.map.scale[0]):
             for y in range(self.map.scale[1]):
                 if self.map.is_box(x, y) and self.new_map.is_box(x, y):
-                    self.map.is_wall(x, y)
+                    self.map.set_tile(x, y, Tile.WALL)
 
     def set_goals(self):
         for x in range(self.map.scale[0]):
             for y in range(self.map.scale[1]):
                 if self.map.is_space(x, y) and self.new_map.is_box(x, y):
-                    self.map.is_goal(x, y)
+                    self.map.set_tile(x, y, Tile.GOAL)
 
     def __copy__(self) -> "Map":
         self.new_map = Map()
@@ -226,10 +233,10 @@ class Generate_map:
                 pos = (x, y)
                 if self.map.is_box(x, y):
                     self.boxlist.append(pos)
-        if self.frozen == 1 and len(self.boxlist) > 6:#magic
+        if self.frozen == 1 and len(self.boxlist) > 3:#magic
             self.frozen = 2
-            print('generated_box')
-            print(self.map.tiles)
+            #print('generated_box')
+            #print(self.map.tiles)
             self.__copy__()
 
     def generate_box(self, x, y) -> bool:
@@ -240,10 +247,11 @@ class Generate_map:
                 pos = (i, j)
                 if self.map.is_box(i, j):
                     self.boxlist.append(pos)
-        if self.frozen == 1 and len(self.boxlist) >= 8:#magic
+
+        if self.frozen == 1 and len(self.boxlist) >= 4:#magic
             self.frozen = 2
-            print('generated_box')
-            print(self.map.tiles)
+            #print('generated_box')
+            #print(self.map.tiles)
             self.__copy__()
             
             
