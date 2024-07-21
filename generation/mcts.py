@@ -1,7 +1,17 @@
+from __future__ import division
+import logging
 import time
 import math
 import random
 #引用自https://github.com/pbsinclair42/MCTS，为适配本项目，略有修改
+
+logger = logging.getLogger('search')
+logger.setLevel(logging.INFO)
+file_handler = logging.FileHandler('my_log.log')
+formatter = logging.Formatter(' %(rewards)s ')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
 
 def randomPolicy(state):
     while not state.isTerminal():
@@ -60,7 +70,10 @@ class mcts():
                 self.executeRound()
         else:
             for i in range(self.searchLimit):
+                print("Searching times",i)
+                
                 self.executeRound()
+                logger.info('', extra={'rewards': self.reward})
 
         bestChild = self.getBestChild(self.root, 0)
         action=(action for action, node in self.root.children.items() if node is bestChild).__next__()
@@ -74,8 +87,8 @@ class mcts():
             execute a selection-expansion-simulation-backpropagation round
         """
         node = self.selectNode(self.root)
-        reward = self.rollout(node.state)
-        self.backpropogate(node, reward)
+        self.reward = self.rollout(node.state)
+        self.backpropogate(node, self.reward)
 
     def selectNode(self, node):
         while not node.isTerminal:
