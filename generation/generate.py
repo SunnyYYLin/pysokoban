@@ -83,7 +83,7 @@ class Generate_map:
         #选取action,对齐库的接口
         action()
         self.all_time+=1
-        return self
+        return deepcopy(self)
 
     def isTerminal(self):
         #判断是否进入结束状态，对齐mcts库的接口
@@ -183,10 +183,6 @@ class Generate_map:
         return True
 
     def end_all(self) -> bool:
-        if self.new_map.is_box(self.player_x, self.player_y):
-            #print('冲突')################################################
-            self.restart()
-            return False
         if self.move_time>self.move_time_limit:##magic
             self.terminal = True
         #print('end all')
@@ -216,6 +212,8 @@ class Generate_map:
             for y in range(self.map.scale[1]):
                 if self.map.is_space(x, y) and self.new_map.is_box(x, y):
                     self.map.set_tile(x, y, Tile.GOAL)
+                if self.map.is_player(x, y) and self.new_map.is_box(x, y):
+                    self.map.set_tile(x, y, Tile.GOALPLAYER)
 
     def __copy__(self) -> "Map":
         self.new_map = Map()
