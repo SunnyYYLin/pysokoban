@@ -45,7 +45,7 @@ class Generate_map:
             
             self.x = np.random.randint(0, self.map.scale[0])
             self.y = np.random.randint(0, self.map.scale[1])
-            self.map.is_player(self.x, self.y)
+            self.map.set_tile(self.x, self.y, Tile.PLAYER)
             
             self.new_map = self.map
             
@@ -161,7 +161,7 @@ class Generate_map:
                 self.new_map.set_tile(self.x, self.y, Tile.SPACE)
                 self.x = new_x
                 self.y = new_y
-                self.new_map.tiles[self]
+                self.new_map.set_tile(self.x, self.y, Tile.PLAYER)
                 self.move_time+=1###################################################
                 #(self.new_map.tiles)
 
@@ -179,7 +179,7 @@ class Generate_map:
             return False
         if self.new_map.is_box(self.player_x, self.player_y):
             print('冲突')################################################
-            self.restart
+            self.restart()
             return False
         if self.move_time>900:##magic
             self.terminal = True
@@ -202,13 +202,13 @@ class Generate_map:
     def remove_boxes(self):
         for x in range(self.map.scale[0]):
             for y in range(self.map.scale[1]):
-                if self.map.is_box(x, y) and self.map.is_box(x, y):
+                if self.map.is_box(x, y) and self.new_map.is_box(x, y):
                     self.map.is_wall(x, y)
 
     def set_goals(self):
         for x in range(self.map.scale[0]):
             for y in range(self.map.scale[1]):
-                if self.map.is_space(x, y) and self.map.is_box(x, y):
+                if self.map.is_space(x, y) and self.new_map.is_box(x, y):
                     self.map.is_goal(x, y)
 
     def __copy__(self) -> "Map":
