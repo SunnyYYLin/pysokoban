@@ -15,6 +15,8 @@ class State(Enum):
     MAIN_MENU = auto()
     VICTORY_MENU = auto()
     GAMING = auto()
+    GENERATING = auto()
+    SOLVING = auto()
     
 class Display:
     def __init__(self, icon_paths: str, scale: Point2D = (800, 600)):
@@ -115,6 +117,22 @@ class Display:
         }
         text_rect = self._show(text_pos)
         return text_rect, text_event
+    
+    def generating(self) -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
+        generating_text = TITLE_FONT.render("Generating Level...", True, (255, 255, 255))
+        text_pos = {
+            generating_text: (0.5, 0.5),
+        }
+        text_rect = self._show(text_pos)
+        return text_rect, {}
+    
+    def ai_solving(self) -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
+        solving_text = TITLE_FONT.render("AI Solving...", True, (255, 255, 255))
+        text_pos = {
+            solving_text: (0.5, 0.5)
+        }
+        text_rect = self._show(text_pos)
+        return text_rect, {}
                     
     def run(self, map: map, lvl_num: int) \
         -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
@@ -127,5 +145,9 @@ class Display:
                 return self.start_menu()
             case State.VICTORY_MENU:
                 return self.victory_menu(lvl_num)
+            case State.GENERATING:
+                return self.generating()
+            case State.SOLVING:
+                return self.ai_solving()
             case _:
                 raise ValueError("Invalid state")

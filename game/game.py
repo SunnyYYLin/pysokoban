@@ -2,10 +2,14 @@ import pygame
 import os
 import logging
 from datetime import datetime
+from typing import Dict
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from ui.display import Display, State
 from ui.input_handler import InputHandler, Event
-from ai.ai import AI
 from generation.mcts import mcts
+from generation.generate import Generate_map
+from sealgo.best_first_search import AStar as AI
 
 from .problem import SokobanProblem, SokobanAction
 from .map import Map, Tile
@@ -125,6 +129,10 @@ class Game:
                 self._handle_gaming(input)
             case State.VICTORY_MENU:
                 self._handle_victory_menu(input)
+            case State.GENERATING:
+                self._handle_generating()
+            case State.SOLVING:
+                self._handle_solving()
             case _:
                 raise ValueError(f"Invalid state: {self.display.state}")
 
@@ -140,9 +148,7 @@ class Game:
                 self._load_level(self.lvl_num)
                 self.display.state = State.GAMING
             case Event.GENERATE:
-                initialState = Generate_map(width=6,height=6)
-                searcher = mcts(timeLimit=6000)
-                bestaction = searcher.search(initialState=initialState)
+                self.display.state = State.GENERATING
             case Event.EXIT:
                 pygame.quit()
                 quit()
@@ -158,24 +164,7 @@ class Game:
             case Event.CONTINUE:
                 self.display.state = State.GAMING
             case Event.ASK_AI:
-                ai = AI(self.problem)
-                solutions = ai.search()
-                if len(solutions) == 0:
-                    logging.info(f"Failed to find a solution for {self.lvl_num}")
-                    print("Failed to find a solution")
-                    self.display.state = State.MAIN_MENU
-                else:
-                    while len(solutions) > 0:
-                        self.map = self.problem.initial_state()
-                        solution = solutions.pop(0)
-                        delay = SOLUTION_DISPLAY_TIME // len(solution)
-                        logging.info(f"Solution for Level{self.lvl_num}: {solution}")
-                        for action in solution:
-                            self.map = self.problem.result(self.map, action)
-                            self.display.render(self.map)
-                            pygame.time.wait(delay)
-                    assert self.problem.is_goal(self.map), "Invalid solution"
-                    self.display.state = State.VICTORY_MENU
+                self.display.state = State.SOLVING
             case Event.RESTART:
                 self.map = self.problem.initial_state()
                 self.display.state = State.GAMING
@@ -219,3 +208,38 @@ class Game:
             case Event.EXIT:
                 pygame.quit()
                 quit()
+    
+    def _handle_solving(self) -> None:
+        """
+        Handles solving events.
+        """
+        ai = AI(self.problem)
+        solutions = ai.search()
+        if len(solutions) == 0:
+            logging.warning(f"Failed to find a solution for {self.lvl_num}")
+            print("Failed to find a solution")
+            self.display.state = State.MAIN_MENU
+        else:
+            while len(solutions) > 0:
+                self.map = self.problem.initial_state()
+                solution = solutions.pop(0)
+                delay = SOLUTION_DISPLAY_TIME // len(solution)
+                logging.info(f"Solution for Level{self.lvl_num}: {solution}")
+                for action in solution:
+                    self.map = self.problem.result(self.map, action)
+                    self.display.render(self.map)
+                    pygame.time.wait(delay)
+            assert self.problem.is_goal(self.map), "Invalid solution"
+            self.display.state = State.VICTORY_MENU
+            
+    def _handle_generating(self) -> None:
+        """
+        Handles generating events.
+        """
+        initialState = Generate_map(width=6,height=6)
+        searcher = mcts(timeLimit=6000)
+        map = searcher.search(initialState)
+        self.problem = SokobanProblem(map)
+        self.map = map
+        self.display.state = State.GAMING
+        

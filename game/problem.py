@@ -1,7 +1,7 @@
 from enum import Enum, auto
 from typing import TypeAlias, List
 from scipy.optimize import linear_sum_assignment
-from sealgo.sealgo.Problem import HeuristicSearchProblem, Action
+from sealgo.problem import HeuristicSearchProblem, Action
 
 from .map import Map
 

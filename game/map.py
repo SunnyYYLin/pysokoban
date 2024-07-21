@@ -123,16 +123,6 @@ class Map:
                 tiles.append([_char_tiles[char] for char in line.rstrip('\n')])
         self.tiles = np.array(tiles, dtype=object)
         return tuple(self.tiles.shape)
-    
-    @property
-    def scale(self) -> Pos:
-        """
-        Gets the dimensions of the map.
-
-        Returns:
-            Pos: The dimensions of the map (width, height).
-        """
-        return self.tiles.shape
 
     def locate_player(self) -> Pos:
         """
