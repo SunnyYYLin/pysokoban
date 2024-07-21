@@ -1,6 +1,5 @@
 from game.map import Map, Tile
 import numpy as np
-from . import mcts
 
 class Generate_map:
     def __init__(self,
@@ -135,7 +134,7 @@ class Generate_map:
         
         if new_x < 0 or new_y < 0 or new_x >= self.map.scale[0] or new_y >= self.map.scale[1]:
             return False
-        if self.new_map.is_wall(new_x, new_y) or self.new_map.is_box(new_x, new_y)=='B':
+        if self.new_map.is_wall(new_x, new_y) or self.new_map.is_box(new_x, new_y):
             return False
 
         self.new_map.set_tile(x, y, Tile.SPACE)
@@ -209,7 +208,7 @@ class Generate_map:
     def set_goals(self):
         for x in range(self.map.scale[0]):
             for y in range(self.map.scale[1]):
-                if self.map.tiles[x][y] == ' ' and self.map.is_box(x, y):
+                if self.map.is_space(x, y) and self.map.is_box(x, y):
                     self.map.is_goal(x, y)
 
     def __copy__(self) -> "Map":
@@ -248,7 +247,7 @@ class Generate_map:
             self.__copy__()
             
             
-        if self.map.tiles[x][y]==' ' and self.frozen == 1 :
+        if self.map.is_space(x, y) and self.frozen == 1 :
             self.map.tiles[x][y]='B'
             return True
         return False
@@ -356,6 +355,6 @@ class Value:
                        (1, 0), (1, 1)]:
             if map.is_wall(x + dx, y + dy):
                 n += 1
-            elif map.tiles[x + dx][y + dy] == ' ':
+            elif map.is_space(x + dx, y + dy):
                 n -= 1
         return not (n == 8 or n == -8)
