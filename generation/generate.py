@@ -1,64 +1,52 @@
 from game.map import Map, Tile
 import numpy as np
-from ui.display import Display
+from copy import deepcopy
 
 class Generate_map:
-    def __init__(self,
-                 width: int=4,
-                 height: int=4,
-                 rate: float = 1.9,
-                 generate: bool = True) -> None:
+    def __init__(self,x,y,map:Map,frozen=0,terminal=False) -> None:
         # 初始化棋盘，将所有的地方都设置为墙壁，并随机确定玩家位置
-        if generate:
-            self.map = Map()
-            self.map.tiles = np.full((width, height),
-                                     fill_value=Tile.WALL,
-                                     dtype=object)
-            self.map.scale = self.map.tiles.shape
-            self.width = width
-            self.height = height
-            self.space_limit=66#magic
+            self.map = deepcopy(map)
+            self.init_map=deepcopy(map)
+            self.width = self.map.tiles.shape[0]
+            self.height = self.map.tiles.shape[1]
+            self.space_limit=9#magic
 
             #self.x = np.random.randint(0, width)
             #self.y = np.random.randint(0, height)
-            self.x=int(self.width/2)
-            self.y=int(self.height/2)
+            self.x,self.y=x,y
+            self.init_x,self.init_y=x,y
+            
             self.map.set_tile(self.x, self.y, Tile.PLAYER)
 ################################################################为了防止不良结果出现
             self.currentplayer = 1
-            self.iter_limits = int(width * height * rate)
-            self.iter_times = 0
-            self.a=False
-            self.move_time = 0
-            self.move_time_limit=50000#magic
+            self.move_time_limit=200#magic
+            self.count_a_limit=100#magic
+            
             self.count_a=0
-            self.count_a_limit=20000#magic
-            self.all_time=0#!!
+            self.move_time = 0
+            self.all_time=0#!!计算loss
+            
+            self.init_count_a=self.count_a
+            self.init_move_time=self.move_time         
 
-            self.frozen = 0             #0表示随机游走，1表示放置箱子，2表示模拟游戏
-            self.terminal = False       #表示是否结束状态
-            self.new_map = self.map
+            self.frozen = frozen             #0表示随机游走，1表示放置箱子，2表示模拟游戏
+            self.init_frozen=frozen 
+            self.terminal = terminal       #表示是否结束状态
+            self.init_terminal=terminal
             
     def restart(self):
-            self.map = Map()
-            self.map.tiles = np.full((self.width, self.height),
-                                     fill_value=Tile.WALL,
-                                     dtype=object)
-            self.map.scale = self.map.tiles.shape
-            self.frozen = 0
-            self.terminal = False
-            self.iter_times = 0
-            self.a=False
-            self.move_time = 0
-            self.count_a=0
+            self.map = deepcopy(self.init_map)
             
-            self.x=int(self.width/2)
-            self.y=int(self.height/2)
-            #self.x = np.random.randint(0, self.map.scale[0])
-            #self.y = np.random.randint(0, self.map.scale[1])
+            self.x = self.init_x
+            self.y = self.init_y
+            self.frozen = self.init_frozen
+            self.terminal = self.init_terminal
+            
+            self.move_time = self.init_move_time
+            self.count_a=self.init_count_a
+            
             self.map.set_tile(self.x, self.y, Tile.PLAYER)
             
-            self.new_map = self.map
             
     def getCurrentPlayer(self):#对齐接口，默认是1
         return self.currentplayer
@@ -93,7 +81,7 @@ class Generate_map:
 
     def takeAction(self, action):
         #选取action,对齐库的接口
-        c = action()
+        action()
         self.all_time+=1
         return self
 
@@ -110,12 +98,10 @@ class Generate_map:
     def getReward(self):
         #计算激励，对齐库的接口
         value = Value(map=self.map)
-        reward = value.reward#-self.all_time*0.0005
-        if reward>150:
+        reward = value.reward-self.all_time*0.005
+        if reward>50:
             print('reward')
             print(reward)
-            display=Display()
-            display.render(self.map)
         
         self.restart()
         self.all_time=0
@@ -213,7 +199,7 @@ class Generate_map:
             #print(self.frozen)
             self.frozen=0
             self.get_list()
-            if len(self.boxlist)<=3:
+            if len(self.boxlist)<=2:
                 self.restart()
                 #rint('重开')
                 
@@ -246,7 +232,7 @@ class Generate_map:
                 pos = (x, y)
                 if self.map.is_box(x, y):
                     self.boxlist.append(pos)
-        if self.frozen == 1 and len(self.boxlist) > 13:#magic
+        if self.frozen == 1 and len(self.boxlist) > 2:#magic
             self.frozen = 2
             #print('generated_box')
             #print(self.map.tiles)
@@ -261,7 +247,7 @@ class Generate_map:
                 if self.map.is_box(i, j):
                     self.boxlist.append(pos)
 
-        if self.frozen == 1 and len(self.boxlist) >= 20:#magic
+        if self.frozen == 1 and len(self.boxlist) >= 4:#magic
             self.frozen = 2
             #print('generated_box')
             #print(self.map.tiles)
