@@ -1,5 +1,6 @@
 from game.map import Map, Tile
 import numpy as np
+from ui.display import Display
 
 class Generate_map:
     def __init__(self,
@@ -16,9 +17,12 @@ class Generate_map:
             self.map.scale = self.map.tiles.shape
             self.width = width
             self.height = height
+            self.space_limit=66#magic
 
-            self.x = np.random.randint(0, width)
-            self.y = np.random.randint(0, height)
+            #self.x = np.random.randint(0, width)
+            #self.y = np.random.randint(0, height)
+            self.x=int(self.width/2)
+            self.y=int(self.height/2)
             self.map.set_tile(self.x, self.y, Tile.PLAYER)
 ################################################################为了防止不良结果出现
             self.currentplayer = 1
@@ -26,7 +30,10 @@ class Generate_map:
             self.iter_times = 0
             self.a=False
             self.move_time = 0
+            self.move_time_limit=50000#magic
             self.count_a=0
+            self.count_a_limit=20000#magic
+            self.all_time=0#!!
 
             self.frozen = 0             #0表示随机游走，1表示放置箱子，2表示模拟游戏
             self.terminal = False       #表示是否结束状态
@@ -45,8 +52,10 @@ class Generate_map:
             self.move_time = 0
             self.count_a=0
             
-            self.x = np.random.randint(0, self.map.scale[0])
-            self.y = np.random.randint(0, self.map.scale[1])
+            self.x=int(self.width/2)
+            self.y=int(self.height/2)
+            #self.x = np.random.randint(0, self.map.scale[0])
+            #self.y = np.random.randint(0, self.map.scale[1])
             self.map.set_tile(self.x, self.y, Tile.PLAYER)
             
             self.new_map = self.map
@@ -85,6 +94,7 @@ class Generate_map:
     def takeAction(self, action):
         #选取action,对齐库的接口
         c = action()
+        self.all_time+=1
         return self
 
     def isTerminal(self):
@@ -93,20 +103,23 @@ class Generate_map:
         if self.terminal:
             #'terminal')
             #input()
-            print('isterminal')
-            print(self.map.tiles)
-            self.restart
+
             return True
         return False
 
     def getReward(self):
         #计算激励，对齐库的接口
         value = Value(map=self.map)
-        reward = value.reward
+        reward = value.reward#-self.all_time*0.0005
+        if reward>150:
+            print('reward')
+            print(reward)
+            display=Display()
+            display.render(self.map)
+        
         self.restart()
+        self.all_time=0
         self.terminal = False
-        print('reward')
-        print(reward)
         return reward
 
     def freeze(self) -> bool:
@@ -118,7 +131,7 @@ class Generate_map:
                 pos = (x, y)
                 if self.map.is_space(x, y):
                     self.map.spacelist.append(pos)
-        if len(self.map.spacelist)<12:   #magic
+        if len(self.map.spacelist)<self.space_limit:   #magic
             pass
         #!!!!!
         else:
@@ -156,7 +169,7 @@ class Generate_map:
             if self.new_map.is_wall(new_x, new_y):
                 #print('1')#!!!!!!死循环？？？？？？？？？？？？？？？？？
                 self.count_a +=1
-                if self.count_a>30:#magic
+                if self.count_a>self.count_a_limit:#magic
                     self.restart()
                 return False
             if self.new_map.is_box(new_x, new_y):
@@ -165,7 +178,7 @@ class Generate_map:
                     return self.move(dx, dy)
                 else :
                     self.count_a +=1
-                    if self.count_a>30:#magic
+                    if self.count_a>self.count_a_limit:#magic
                         self.restart()
                 return False
             elif self.new_map.is_space(new_x, new_y):
@@ -188,7 +201,7 @@ class Generate_map:
             #print('冲突')################################################
             self.restart()
             return False
-        if self.move_time>200:##magic
+        if self.move_time>self.move_time_limit:##magic
             self.terminal = True
         #print('end all')
         #print(self.map.tiles)
@@ -200,7 +213,7 @@ class Generate_map:
             #print(self.frozen)
             self.frozen=0
             self.get_list()
-            if len(self.boxlist)<=2:
+            if len(self.boxlist)<=3:
                 self.restart()
                 #rint('重开')
                 
@@ -233,7 +246,7 @@ class Generate_map:
                 pos = (x, y)
                 if self.map.is_box(x, y):
                     self.boxlist.append(pos)
-        if self.frozen == 1 and len(self.boxlist) > 3:#magic
+        if self.frozen == 1 and len(self.boxlist) > 13:#magic
             self.frozen = 2
             #print('generated_box')
             #print(self.map.tiles)
@@ -248,7 +261,7 @@ class Generate_map:
                 if self.map.is_box(i, j):
                     self.boxlist.append(pos)
 
-        if self.frozen == 1 and len(self.boxlist) >= 4:#magic
+        if self.frozen == 1 and len(self.boxlist) >= 20:#magic
             self.frozen = 2
             #print('generated_box')
             #print(self.map.tiles)
