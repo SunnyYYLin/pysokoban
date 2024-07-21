@@ -5,6 +5,7 @@ from datetime import datetime
 from ui.display import Display, State
 from ui.input_handler import InputHandler, Event
 from ai.ai import AI
+from generation.mcts import mcts
 
 from .problem import SokobanProblem, SokobanAction
 from .map import Map, Tile
@@ -139,7 +140,9 @@ class Game:
                 self._load_level(self.lvl_num)
                 self.display.state = State.GAMING
             case Event.GENERATE:
-                pass
+                initialState = Generate_map(width=6,height=6)
+                searcher = mcts(timeLimit=6000)
+                bestaction = searcher.search(initialState=initialState)
             case Event.EXIT:
                 pygame.quit()
                 quit()
