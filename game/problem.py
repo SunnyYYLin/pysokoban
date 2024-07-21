@@ -1,5 +1,6 @@
 from enum import Enum, auto
 from typing import TypeAlias, List
+from functools import lru_cache
 from scipy.optimize import linear_sum_assignment
 from sealgo.problem import HeuristicSearchProblem, Action
 
@@ -10,7 +11,6 @@ class SokobanAction(Enum):
     DOWN = auto()
     LEFT = auto()
     RIGHT = auto()
-    PAUSE = auto()
     
 _action_dirs:dict[int,tuple[int,int]] = {
     SokobanAction.UP: (-1, 0),
@@ -101,7 +101,7 @@ class SokobanProblem(HeuristicSearchProblem):
         if action == Action.STAY:
             return new_map
         return new_map.p_move(_action_dirs[action][0], _action_dirs[action][1])
-        
+    
     def is_goal(self, map: State):
         """
         Checks if the given state is a goal state.
@@ -139,6 +139,7 @@ class SokobanProblem(HeuristicSearchProblem):
         """
         return self.level.__copy__().goal_state()
     
+    @lru_cache(maxsize=1_000_000_000)
     def heuristic(self, map: State) -> int:
         """
         Returns the heuristic value of a given state.
@@ -150,7 +151,7 @@ class SokobanProblem(HeuristicSearchProblem):
         - The heuristic value of the state.
 
         """
-        return 3*self._min_perfect_matching(map) + 10*map.count_deadlock() + map.player_to_boxes()
+        return 3*self._min_perfect_matching(map) + map.player_to_boxes() + self._deadlock_punishment(map)
     
     def _min_perfect_matching(self, map: Map) -> int:
         """
@@ -167,3 +168,15 @@ class SokobanProblem(HeuristicSearchProblem):
         cost_matrix = map.cost_matrix(boxes, goals)
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
         return cost_matrix[row_ind, col_ind].sum()
+    
+    def _deadlock_punishment(self, map: Map) -> int:
+        """
+        Calculates the punishment for deadlocks.
+
+        Args:
+            state (Map): The current state of the Sokoban problem.
+
+        Returns:
+            int: The heuristic value.
+        """
+        return 50 if map.count_deadlock() else 0

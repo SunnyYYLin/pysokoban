@@ -58,7 +58,7 @@ class Display:
         pygame.display.flip()
         return text_rect
                     
-    def victory_menu(self, lvl_num: int) \
+    def _victory_menu(self, lvl_num: int) \
         -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
         victory_text = TITLE_FONT.render(f"Level {lvl_num} Complete!", True, (255, 255, 255))
         next_text = BUTTON_FONT.render("Next Level", True, (255, 255, 255))
@@ -75,7 +75,7 @@ class Display:
         text_rect = self._show(text_pos)
         return text_rect, text_event
                     
-    def start_menu(self) \
+    def _start_menu(self) \
         -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
         title_text = TITLE_FONT.render("Sokoban", True, (255, 255, 255))
         start_text = BUTTON_FONT.render("Start Game", True, (255, 255, 255))
@@ -95,7 +95,7 @@ class Display:
         text_rect = self._show(text_pos)
         return text_rect, text_event
                     
-    def main_menu(self, lvl_num: int) \
+    def _main_menu(self, lvl_num: int) \
         -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
         title_text = TITLE_FONT.render(f"Level {lvl_num}", True, (255, 255, 255))
         start_text = BUTTON_FONT.render("Continue", True, (255, 255, 255))
@@ -118,7 +118,7 @@ class Display:
         text_rect = self._show(text_pos)
         return text_rect, text_event
     
-    def generating(self) -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
+    def _generating(self) -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
         generating_text = TITLE_FONT.render("Generating Level...", True, (255, 255, 255))
         text_pos = {
             generating_text: (0.5, 0.5),
@@ -126,7 +126,7 @@ class Display:
         text_rect = self._show(text_pos)
         return text_rect, {}
     
-    def ai_solving(self) -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
+    def _ai_solving(self) -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
         solving_text = TITLE_FONT.render("AI Solving...", True, (255, 255, 255))
         text_pos = {
             solving_text: (0.5, 0.5)
@@ -140,14 +140,14 @@ class Display:
             case State.GAMING:
                 return self.render(map)
             case State.MAIN_MENU:
-                return self.main_menu(lvl_num)
+                return self._main_menu(lvl_num)
             case State.START_MENU:
-                return self.start_menu()
+                return self._start_menu()
             case State.VICTORY_MENU:
-                return self.victory_menu(lvl_num)
+                return self._victory_menu(lvl_num)
             case State.GENERATING:
-                return self.generating()
+                return self._generating()
             case State.SOLVING:
-                return self.ai_solving()
+                return self._ai_solving()
             case _:
                 raise ValueError("Invalid state")

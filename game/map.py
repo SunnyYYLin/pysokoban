@@ -78,8 +78,7 @@ class Map:
         is_all_boxes_in_place(self) -> bool: Checks if all boxes are in their designated places.
         set_to_goal(self) -> None: Sets all boxes to their designated places.
         p_move(self, dx: int, dy: int) -> "Map": Moves the player in a given direction.
-        is_deadlock(self, x: int, y: int) -> bool: Checks if the box at the specified position is in a deadlock.
-        
+        count_deadlock(self) -> int: Counts the number of boxes in deadlock.
     """
     def __init__(self, level_file: str = ''):
         """

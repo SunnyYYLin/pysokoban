@@ -106,7 +106,7 @@ class Game:
             start_time = os.times()
             solutions = []
             while len(solutions) == 0:
-                ai = AI(problem)
+                ai = AI(problem, weight=2)
                 solutions = ai.search()
             finish_time = os.times()
             elapsed_time = finish_time.elapsed - start_time.elapsed
