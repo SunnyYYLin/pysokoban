@@ -70,7 +70,7 @@ class mcts():
                 self.executeRound()
         else:
             for i in range(self.searchLimit):
-                print("Searching times",i)
+                #print("Searching times",i)
                 
                 self.executeRound()
                 logger.info('', extra={'rewards': self.reward})
