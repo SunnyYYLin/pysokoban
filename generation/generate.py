@@ -1,6 +1,8 @@
 from game.map import Map, Tile
 import numpy as np
 from copy import deepcopy
+from generate.mcts import mcts
+from ui.display import Display
 
 class Generate_map:
     def __init__(self,x,y,map:Map,frozen=0,terminal=False) -> None:
@@ -83,7 +85,7 @@ class Generate_map:
         #选取action,对齐库的接口
         action()
         self.all_time+=1
-        return self
+        return deepcopy(self)
 
     def isTerminal(self):
         #判断是否进入结束状态，对齐mcts库的接口
@@ -183,10 +185,6 @@ class Generate_map:
         return True
 
     def end_all(self) -> bool:
-        if self.new_map.is_box(self.player_x, self.player_y):
-            #print('冲突')################################################
-            self.restart()
-            return False
         if self.move_time>self.move_time_limit:##magic
             self.terminal = True
         #print('end all')
@@ -216,6 +214,8 @@ class Generate_map:
             for y in range(self.map.scale[1]):
                 if self.map.is_space(x, y) and self.new_map.is_box(x, y):
                     self.map.set_tile(x, y, Tile.GOAL)
+                if self.map.is_player(x, y) and self.new_map.is_box(x, y):
+                    self.map.set_tile(x, y, Tile.GOALPLAYER)
 
     def __copy__(self) -> "Map":
         self.new_map = Map()
@@ -365,3 +365,51 @@ class Value:
             elif map.is_space(x + dx, y + dy):
                 n -= 1
         return not (n == 8 or n == -8)
+
+def generate_map(width=4,height=4):
+        
+    map=Map()
+    map.tiles = np.full((4, 4),fill_value=Tile.WALL,dtype=object)
+    map.scale = map.tiles.shape
+    x,y=2,2
+    
+    initialState = Generate_map(x=x,y=y,map=map)
+    
+    display=Display()
+    
+    searcher = mcts(iterationLimit=2)    
+    next_state=initialState
+    all_time=0
+    while(not next_state.isTerminal()):
+        
+        
+        next_state.init_frozen=next_state.frozen
+        next_state.init_terminal=next_state.terminal
+        next_state.init_x=next_state.x
+        next_state.init_y=next_state.y
+        next_state.init_map=next_state.map
+        
+        next_state.init_count_a=next_state.count_a
+        next_state.init_move_time=next_state.move_time
+        
+        action = searcher.search(initialState=next_state)
+        
+        next_state.init_frozen=0
+        next_state.init_terminal=False
+        next_state.init_x=x
+        next_state.init_y=y
+        next_state.init_map=map
+        next_state.init_count_a=0
+        next_state.init_move_time=0
+        
+        
+        next_state=next_state.takeAction(action)
+        display.render(next_state.map)
+        
+        all_time+=1
+        print(action)
+        print(all_time)
+        print(next_state.map.tiles)
+        
+    display.render(next_state.map)
+    return next_state
