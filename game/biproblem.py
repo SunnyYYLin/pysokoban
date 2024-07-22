@@ -12,7 +12,7 @@ class BiSokobanProblem(SokobanProblem, BiSearchProblem):
         super().__init__(init_state)
         self.init_boxes = init_state.locate_boxes()
     
-    def goal_states(self, num: int = 5) -> Generator[Map, None, None]:
+    def goal_states(self, num: int = 10) -> List[Map]:
         """
         Returns the goal states of the problem.
 
@@ -20,8 +20,7 @@ class BiSokobanProblem(SokobanProblem, BiSearchProblem):
         - The list of goal states of the problem.
 
         """
-        for _ in range(num):
-            yield copy(self.level).set_to_goal()
+        return self.level.set_to_goal(num)
     
     def actions_to(self, map: Map) -> List[SokobanAction]:
         """
@@ -47,12 +46,13 @@ class BiSokobanProblem(SokobanProblem, BiSearchProblem):
         del map
         if action == Action.STAY:
             return last_map
-        return last_map.p_undo(_action_dirs[action][0], _action_dirs[action][1])
+        last_map.p_undo(_action_dirs[action][0], _action_dirs[action][1])
+        return last_map
     
     @lru_cache(maxsize=1_000_000)
-    def b_hueristic(self, map: Map) -> int:
+    def re_heuristic(self, map: Map) -> int:
         boxes = map.locate_boxes()
-        return self._min_perfect_matching(boxes, self.init_boxes) + self._player_to_start(map)
+        return 3*self._min_perfect_matching(boxes, self.init_boxes) + self._player_to_start(map)
         
     def _player_to_start(self, map: Map) -> int:
         return abs(map.player_x - self.level.player_x) + abs(map.player_y - self.level.player_y)
