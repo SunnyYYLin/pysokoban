@@ -181,10 +181,12 @@ class Game:
         """
         match input:
             case SokobanAction():
-                self.map = self.problem.result(self.map, input)
-                self.display.render(self.map)
-                if self.problem.is_goal(self.map):
-                    self.display.state = State.VICTORY_MENU
+                actions = self.problem.actions(self.map)
+                if input in actions:
+                    self.map = self.problem.result(self.map, input)
+                    self.display.render(self.map)
+                    if self.problem.is_goal(self.map):
+                        self.display.state = State.VICTORY_MENU
             case Event.PAUSE:
                 self.display.state = State.MAIN_MENU
             case Event.EXIT:
