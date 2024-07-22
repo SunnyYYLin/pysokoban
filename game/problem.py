@@ -18,7 +18,6 @@ _action_dirs:dict[int,tuple[int,int]] = {
     SokobanAction.DOWN: (1, 0),
     SokobanAction.LEFT: (0, -1),
     SokobanAction.RIGHT: (0, 1),
-    Action.STAY: (0, 0)
 }
 
 class SokobanProblem(HeuristicSearchProblem):
