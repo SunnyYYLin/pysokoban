@@ -27,7 +27,7 @@
     ```sh
     conda create -n pysokoban
     conda activate pysokoban
-    pip install pygame
+    pip install pygame scipy numpy
     ```
 
 3. **运行游戏**

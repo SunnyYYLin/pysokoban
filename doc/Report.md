@@ -114,10 +114,10 @@ class AStar(BestFirstSearch):
 `AStar`继承自抽象父类 `BestFirstSearch`，另外还包含一个权重参数，其对每个状态节点的评价函数 `eval_f`为：
 
 $$
-f(n):=g(n)+h(n)
+f(n):=g(n)+w\cdot h(n)
 $$
 
-其中$g(n)$为累计代价，即到达该状态的路径代价的总和， $h(n)$为预估代价，即启发式函数给出的到达目标节点的近似路径代价。
+其中$g(n)$为累计代价，即到达该状态的路径代价的总和；$h(n)$为预估代价，即启发式函数给出的到达目标节点的近似路径代价；$w$为预估代价所占的权重，通过调节$w$也可以获得不同的搜索效率。
 
 ```python
 class BestFirstSearch(Search):

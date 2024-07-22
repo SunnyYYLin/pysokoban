@@ -103,7 +103,7 @@ class Game:
             start_time = os.times()
             solutions = []
             while len(solutions) == 0:
-                ai = AI(self.problem)
+                ai = AI(self.problem, weight=5)
                 solutions = ai.search()
             finish_time = os.times()
             elapsed_time = finish_time.elapsed - start_time.elapsed
@@ -212,7 +212,7 @@ class Game:
         """
         Handles solving events.
         """
-        ai = AI(self.problem)
+        ai = AI(self.problem, weight=5)
         solutions = ai.search()
         if len(solutions) == 0:
             logging.warning(f"Failed to find a solution for {self.lvl_num}")
