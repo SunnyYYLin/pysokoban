@@ -109,7 +109,7 @@ class Generate_map:
         #计算激励，对齐库的接口
         value = Value(map=self.map)
         reward = value.reward#-self.all_time*0.0005
-        if reward>67:
+        if reward>=85:
             print('reward')
             print(reward)
             self.show_map=Map()
@@ -250,7 +250,7 @@ class Generate_map:
                 pos = (x, y)
                 if self.map.is_box(x, y):
                     self.boxlist.append(pos)
-        if self.frozen == 1 and len(self.boxlist) > 4:#magic
+        if self.frozen == 1 and len(self.boxlist) > 5:#magic
             self.frozen = 2
             #print('generated_box')
             #print(self.map.tiles)
@@ -265,7 +265,7 @@ class Generate_map:
                 if self.map.is_box(i, j):
                     self.boxlist.append(pos)
 
-        if self.frozen == 1 and len(self.boxlist) >= 6:#magic
+        if self.frozen == 1 and len(self.boxlist) >= 7:#magic
             self.frozen = 2
             #print('generated_box')
             #print(self.map.tiles)
@@ -293,7 +293,7 @@ class Value:
         self.goallist = []
 
     @property
-    def reward(self, wb=5, wc=10, wn=1, k=5) -> float:
+    def reward(self, wb=15, wc=5, wn=1, k=5) -> float:
         self.get_list(self.map)
         
         Pb = self.num_block_33(self.map)
@@ -387,7 +387,7 @@ class Value:
 def generate(width=6, height=6):
     state=Generate_map(width, height)
     reward=0
-    while reward<67:
+    while reward<85:
         while not state.isTerminal():
             try:
                 action = random.choice(state.getPossibleActions())################################
