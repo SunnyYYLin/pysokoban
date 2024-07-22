@@ -23,7 +23,7 @@ def main():
                         ])
     pygame.init()
     game = Game(lvl_num=args.level, icon_style=args.icon_style)
-    if args.test:
+    if args.test or True:
         game.test()
     else:
         game.run()

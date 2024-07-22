@@ -101,7 +101,7 @@ class BiSearchProblem(SearchProblem):
         b_heuristic(state: State) -> float: Returns the backward heuristic value of the given state.
     """
     @abstractmethod
-    def goal_states(self, state: State) -> Generator[State, None, None]:
+    def goal_states(self, state: State) -> List[State]:
         pass
     
     @abstractmethod
@@ -113,7 +113,7 @@ class BiSearchProblem(SearchProblem):
         pass
     
     @abstractmethod
-    def b_hueristic(self, state: State) -> int|float:
+    def re_heuristic(self, state: State) -> int|float:
         pass
     
 class GameState(ABC):

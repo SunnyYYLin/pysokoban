@@ -9,9 +9,10 @@ from ui.display import Display, State
 from ui.input_handler import InputHandler, Event
 from generation.mcts import mcts
 from generation.generate import generate
-from sealgo.best_first_search import AStar as AI
+from sealgo.bidirectional import BiAStar as AI
 
 from .problem import SokobanProblem, SokobanAction
+from .biproblem import BiSokobanProblem
 from .map import Map, Tile
 
 SOLUTION_DISPLAY_TIME = 5_000 # total time to display a solution of each level (ms)
@@ -24,7 +25,7 @@ key_actions = {
     pygame.K_RIGHT: SokobanAction.RIGHT,
 }
 assets_path = "assets"
-
+        
 class Game:
     """
     Represents the Sokoban game.
@@ -79,7 +80,7 @@ class Game:
         self.problem = SokobanProblem(map)
         self.map = self.problem.initial_state()
 
-    def run(self, start_level=1):
+    def run(self):
         """
         Runs the game.
 
@@ -87,26 +88,25 @@ class Game:
             start_level (int): The level number to start from. Default is 1.
         """
         clock = pygame.time.Clock()
-        self.lvl_num = start_level
         while self.running:
             self._handle_event()
             clock.tick(60)
 
-    def test(self, end_lvl: int = 20):
+    def test(self, start_lvl: int = 0, end_lvl: int = 20):
         """
         Runs a test on multiple levels.
 
         Args:
             end_lvl (int): The last level number to test. Default is 20.
         """
-        start_lvl = self.lvl_num
+        self.lvl_num = start_lvl
         for lvl_num in range(start_lvl, end_lvl + 1):
             self._load_level(lvl_num)
-            problem = SokobanProblem(self.map)
+            problem = BiSokobanProblem(self.map)
             start_time = os.times()
             solutions = []
             while len(solutions) == 0:
-                ai = AI(problem, weight=10)
+                ai = AI(problem)
                 solutions = ai.search()
             finish_time = os.times()
             elapsed_time = finish_time.elapsed - start_time.elapsed

@@ -14,6 +14,7 @@ class Tile(Enum):
     SPACE = auto()
 
 Pos = tuple[int, int]
+dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 _char_tiles = {
     '#': Tile.WALL,
     '$': Tile.BOX,
@@ -432,7 +433,7 @@ class Map:
         distances = np.abs(pos1[:, np.newaxis, :] - pos2[np.newaxis, :, :])
         return distances.sum(axis=2)
     
-    def set_to_goal(self) -> None:
+    def set_to_goal(self, num: int = 10) -> List["Map"]:
         """
         Sets all boxes to their designated places.
 
@@ -441,11 +442,23 @@ class Map:
         """
         if self.is_goal(self.player_x, self.player_y) == Tile.GOALPLAYER:
             self.set_tile(self.player_x, self.player_y, Tile.GOAL)
-        self.player_x, self.player_y = random.choice(np.argwhere(self.tiles == Tile.SPACE))
-        self.set_tile(self.player_x, self.player_y, Tile.PLAYER)
-        
+        else:
+            self.set_tile(self.player_x, self.player_y, Tile.SPACE)
         self.tiles[self.tiles == Tile.BOX] = Tile.SPACE
         self.tiles[self.tiles == Tile.GOAL] = Tile.GOALBOX
+        boxes = self.locate_boxes()
+        goals = []
+        n = 0
+        for dir in dirs:
+            for box in boxes:
+                if self.is_space(box[0]+dir[0], box[1]+dir[1]):
+                    if n > num:
+                        break
+                    n += 1
+                    new_map = copy(self)
+                    new_map.set_tile(box[0]+dir[0], box[1]+dir[1], Tile.PLAYER)
+                    goals.append(new_map)
+        return goals
         
     def can_pull(self, x, y, dx, dy) -> bool:
         """
