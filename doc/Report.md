@@ -12,6 +12,10 @@
 
 去除掉重复局面，每个推箱子问题的状态空间是有限的，那么在有限时间内（即使可能是超出多项式时间），用搜索算法搜索从初始状态到目标状态的路径就是可解的。问题的关键就是如何避免探索没有必要的状态，这包括达成目标的可能性很低的状态和后续已经无法达到目标的状态（称为死锁）。
 
+| ![死锁](deadlock.png) |
+| :-----------------: |
+| 图1 死锁的一种情况（左侧两个箱子）  |
+
 由于导致死锁的动作是单向的，并且推箱子问题又是完全可观测的，所以使用离线搜索是好过在线搜索（局部搜索）的。为了避免探索重复状态，甚至造成死循环，为状态类自定义哈希方法，并在搜索中比较即可。为了避免探索没有必要的状态，我们可以人工设计启发式函数和使用A\* 算法。启发式函数需要精心设计。一个好的启发式函数可以大大减少搜索空间，提高搜索效率。启发式函数的主要要求是：
 
 1. 一致性：启发式函数满足三角不等式，即对于任意状态$n$和其邻接状态$n'$，$h(n) \leq c(n, n') + h(n')$，其中$h(n)$为启发式函数值，$c(n, n')$为从$n$到$n'$的实际代价。
@@ -150,6 +154,12 @@ class BestFirstSearch(Search):
 
 `Display`模块在 `ui/display.py`实现，负责图形用户界面的显示，初始化时会加载材质，材质风格在 `assets/`中储存，可以在启动时被命令行参数 `--icon-style`指定。枚举类 `State`定义了GUI的可能状态：开始菜单、游戏中、主菜单（暂停菜单）、胜利菜单、AI解决中、关卡生成中。每种菜单状态下分别由一种私有方法渲染，由方法 `run()`判断。
 
+| ![开始菜单](start_menu.png) |   ![主菜单](main_menu.png)   |
+| :---------------------: | :-----------------------: |
+|         图2 开始菜单         |          图3 主菜单           |
+|   ![游戏画面](gaming.png)   | ![胜利菜单](victory_menu.png) |
+|         图4 游戏画面         |          图5 胜利菜单          |
+
 开始菜单 ` _start_menu()`在启动时出现，显示游戏标题，提供开始游戏、生成关卡、退出的选项；主菜单 `_main_menu()`在暂停后出现，显示关卡号，提供继续游戏、重新开始、询问AI、退出的选项；胜利菜单 `_victory_menu()`在每次通关后出现，提供下一关、退出的选项，如果所有关卡都通关，则返回主菜单；游戏中，渲染当前状态的可视化界面，每个地块的材质默认是从设计要求提供的[推箱子网站](https://sokoban.cn/utility/levelset.php?set=box_it)上下载的。
 
 ### 用户输入处理 `InputHandler`
@@ -188,56 +198,83 @@ $$
 利用A\*算法，使用最优匹配距离、人箱最近距离和，在20个示例关卡上测试，得到结果如下：
 
 ```log
-2024-07-22 00:36:32,665 - INFO - Game initialized at 2024-07-22 00:36:32.665623
-2024-07-22 00:36:32,917 - INFO - Level 1: Solution found in 0.25 seconds.
-2024-07-22 00:36:32,917 - INFO - Solution length: [23]
-2024-07-22 00:36:33,986 - INFO - Level 2: Solution found in 1.06 seconds.
-2024-07-22 00:36:33,987 - INFO - Solution length: [58]
-2024-07-22 00:36:34,128 - INFO - Level 3: Solution found in 0.13 seconds.
-2024-07-22 00:36:34,128 - INFO - Solution length: [43]
-2024-07-22 00:36:34,317 - INFO - Level 4: Solution found in 0.18 seconds.
-2024-07-22 00:36:34,317 - INFO - Solution length: [73]
-2024-07-22 00:36:35,151 - INFO - Level 5: Solution found in 0.83 seconds.
-2024-07-22 00:36:35,151 - INFO - Solution length: [55]
-2024-07-22 00:36:37,616 - INFO - Level 6: Solution found in 2.46 seconds.
-2024-07-22 00:36:37,616 - INFO - Solution length: [32]
-2024-07-22 00:36:37,825 - INFO - Level 7: Solution found in 0.20 seconds.
-2024-07-22 00:36:37,825 - INFO - Solution length: [52]
-2024-07-22 00:36:43,365 - INFO - Level 8: Solution found in 5.53 seconds.
-2024-07-22 00:36:43,366 - INFO - Solution length: [131]
-2024-07-22 00:36:45,326 - INFO - Level 9: Solution found in 1.95 seconds.
-2024-07-22 00:36:45,326 - INFO - Solution length: [83]
-2024-07-22 00:36:55,762 - INFO - Level 10: Solution found in 10.43 seconds.
-2024-07-22 00:36:55,762 - INFO - Solution length: [78]
-2024-07-22 00:36:55,944 - INFO - Level 11: Solution found in 0.18 seconds.
-2024-07-22 00:36:55,944 - INFO - Solution length: [104]
-2024-07-22 00:36:56,500 - INFO - Level 12: Solution found in 0.55 seconds.
-2024-07-22 00:36:56,501 - INFO - Solution length: [37]
-2024-07-22 00:36:59,449 - INFO - Level 13: Solution found in 2.94 seconds.
-2024-07-22 00:36:59,449 - INFO - Solution length: [60]
-2024-07-22 00:37:01,674 - INFO - Level 14: Solution found in 2.22 seconds.
-2024-07-22 00:37:01,674 - INFO - Solution length: [184]
-2024-07-22 00:37:07,933 - INFO - Level 15: Solution found in 6.25 seconds.
-2024-07-22 00:37:07,933 - INFO - Solution length: [121]
-2024-07-22 00:41:37,750 - INFO - Level 16: Solution found in 269.81 seconds.
-2024-07-22 00:41:37,750 - INFO - Solution length: [90]
-2024-07-22 00:45:26,704 - INFO - Level 17: Solution found in 228.95 seconds.
-2024-07-22 00:45:26,704 - INFO - Solution length: [397]
-2024-07-22 00:45:37,443 - INFO - Level 18: Solution found in 10.73 seconds.
-2024-07-22 00:45:37,443 - INFO - Solution length: [89]
-2024-07-22 01:02:18,220 - INFO - Level 19: Solution found in 1000.78 seconds.
-2024-07-22 01:02:18,221 - INFO - Solution length: [209]
-2024-07-22 01:02:20,534 - INFO - Level 20: Solution found in 2.31 seconds.
-2024-07-22 01:02:20,534 - INFO - Solution length: [73]
+2024-07-22 12:11:26,804 - INFO - Game initialized at 2024-07-22 12:11:26.804829
+2024-07-22 12:11:27,065 - INFO - The b-factor is 2.1955863578374766
+2024-07-22 12:11:27,065 - INFO - Level 1: Solution found in 0.26 seconds.
+2024-07-22 12:11:27,065 - INFO - Solution length: [25]
+2024-07-22 12:11:28,642 - INFO - The b-factor is 2.622756694159562
+2024-07-22 12:11:28,642 - INFO - Level 2: Solution found in 1.57 seconds.
+2024-07-22 12:11:28,642 - INFO - Solution length: [27]
+2024-07-22 12:11:28,949 - INFO - The b-factor is 2.1655796487703918
+2024-07-22 12:11:28,950 - INFO - Level 3: Solution found in 0.31 seconds.
+2024-07-22 12:11:28,950 - INFO - Solution length: [35]
+2024-07-22 12:11:29,194 - INFO - The b-factor is 1.6870676516829783
+2024-07-22 12:11:29,194 - INFO - Level 4: Solution found in 0.24 seconds.
+2024-07-22 12:11:29,194 - INFO - Solution length: [71]
+2024-07-22 12:11:30,372 - INFO - The b-factor is 2.277612976131103
+2024-07-22 12:11:30,372 - INFO - Level 5: Solution found in 1.17 seconds.
+2024-07-22 12:11:30,373 - INFO - Solution length: [41]
+2024-07-22 12:11:33,062 - INFO - The b-factor is 2.811150845173945
+2024-07-22 12:11:33,062 - INFO - Level 6: Solution found in 2.69 seconds.
+2024-07-22 12:11:33,062 - INFO - Solution length: [30]
+2024-07-22 12:11:33,286 - INFO - The b-factor is 1.836101573780415
+2024-07-22 12:11:33,286 - INFO - Level 7: Solution found in 0.23 seconds.
+2024-07-22 12:11:33,286 - INFO - Solution length: [52]
+2024-07-22 12:11:44,935 - INFO - The b-factor is 2.4472097233439887
+2024-07-22 12:11:44,935 - INFO - Level 8: Solution found in 11.65 seconds.
+2024-07-22 12:11:44,935 - INFO - Solution length: [71]
+2024-07-22 12:11:47,716 - INFO - The b-factor is 2.175626877770764
+2024-07-22 12:11:47,716 - INFO - Level 9: Solution found in 2.78 seconds.
+2024-07-22 12:11:47,716 - INFO - Solution length: [79]
+2024-07-22 12:12:02,265 - INFO - The b-factor is 2.5029435109458373
+2024-07-22 12:12:02,265 - INFO - Level 10: Solution found in 14.55 seconds.
+2024-07-22 12:12:02,265 - INFO - Solution length: [76]
+2024-07-22 12:12:02,755 - INFO - The b-factor is 1.7439535788979916
+2024-07-22 12:12:02,756 - INFO - Level 11: Solution found in 0.49 seconds.
+2024-07-22 12:12:02,756 - INFO - Solution length: [78]
+2024-07-22 12:12:04,668 - INFO - The b-factor is 2.52037307175807
+2024-07-22 12:12:04,668 - INFO - Level 12: Solution found in 1.91 seconds.
+2024-07-22 12:12:04,668 - INFO - Solution length: [37]
+2024-07-22 12:12:42,908 - INFO - The b-factor is 2.96284940146013
+2024-07-22 12:12:42,909 - INFO - Level 13: Solution found in 38.24 seconds.
+2024-07-22 12:12:42,909 - INFO - Solution length: [56]
+2024-07-22 12:12:47,177 - INFO - The b-factor is 1.9528706242125256
+2024-07-22 12:12:47,177 - INFO - Level 14: Solution found in 4.27 seconds.
+2024-07-22 12:12:47,177 - INFO - Solution length: [144]
+2024-07-22 12:12:55,734 - INFO - The b-factor is 2.2320129447429133
+2024-07-22 12:12:55,734 - INFO - Level 15: Solution found in 8.56 seconds.
+2024-07-22 12:12:55,735 - INFO - Solution length: [95]
+2024-07-22 12:21:00,656 - INFO - The b-factor is 3.4026483702748584
+2024-07-22 12:21:00,657 - INFO - Level 16: Solution found in 484.92 seconds.
+2024-07-22 12:21:00,657 - INFO - Solution length: [60]
+2024-07-22 12:21:51,155 - INFO - The b-factor is 2.8607833766234765
+2024-07-22 12:21:51,155 - INFO - Level 17: Solution found in 50.50 seconds.
+2024-07-22 12:21:51,155 - INFO - Solution length: [67]
+2024-07-22 12:21:53,963 - INFO - The b-factor is 2.2596906302970865
+2024-07-22 12:21:53,963 - INFO - Level 18: Solution found in 2.80 seconds.
+2024-07-22 12:21:53,963 - INFO - Solution length: [63]
+2024-07-22 12:35:24,375 - INFO - The b-factor is 2.84201976504555
+2024-07-22 12:35:24,376 - INFO - Level 19: Solution found in 810.42 seconds.
+2024-07-22 12:35:24,376 - INFO - Solution length: [164]
+2024-07-22 12:35:27,046 - INFO - The b-factor is 2.3357095887171684
+2024-07-22 12:35:27,046 - INFO - Level 20: Solution found in 2.67 seconds.
+2024-07-22 12:35:27,046 - INFO - Solution length: [55]
 ```
 
-除了16、17和19关，该算法都能在较快的时间内找到答案。其中19关的时间尤其长。可能是启发式函数设计不恰当，导致探索了很多没有发现的死锁；也可能是阻挡过多，导致最优匹配给出的距离过于低估了箱子需要前往目标的路程，难以发现正确的路径。
+除了16和19关，该算法都能在较快的时间内找到答案。其中19关的时间尤其长，而16关的分支因子达到了3.4。可能是启发式函数设计不恰当，导致探索了很多没有发现的死锁；也可能是阻挡过多，导致最优匹配给出的距离过于低估了箱子需要前往目标的路程，难以发现正确的路径。
 
 ### 推箱子生成
 
 连续生成三次推箱子关卡，平均用时15s得到的结果如下图：
-![1721654830615](images/Report/1721654830615.png)
-![1721654842589](images/Report/1721654842589.png)![1721654846331](images/Report/1721654846331.png)
+
+| ![第一次生成](generated_map_01.png) |
+| :----------------------------: |
+|            图6 第一次生成            |
+| ![第二次生成](generated_map_02.png) |
+|            图7 第二次生成            |
+| ![第三次生成](generated_map_03.png) |
+|            图8 第三次生成            |
+
 
 可以看到，生成的地图都是可解的，并且有一定的多样性和难度。
 
