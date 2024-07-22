@@ -16,15 +16,17 @@
 1. **克隆仓库**
 
     ```sh
-    git clone https://github.com/yourusername/sokoban.git
-    cd sokoban
+    git clone https://github.com/SunnyLinYY/pysokoban.git
+    cd pysokoban
     ```
 
 2. **安装依赖**
 
-    确保已安装Python v3.12和pip，然后运行：
+    安装默认python>=12的conda，然后运行：
 
     ```sh
+    conda create -n pysokoban
+    conda activate pysokoban
     pip install pygame
     ```
 
