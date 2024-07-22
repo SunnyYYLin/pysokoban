@@ -1,10 +1,8 @@
 from typing import List
 import numpy as np
 from enum import Enum, auto
-from typing import List
-import numpy as np
-import os
 from copy import copy
+import random
 
 class Tile(Enum):
     WALL = auto()
@@ -282,8 +280,8 @@ class Map:
             None
         """
         self.tiles[self.tiles == Tile.BOX] = Tile.SPACE
-        self.tiles[self.tiles == Tile.GOALBOX] = Tile.GOAL
-        
+        self.tiles[self.tiles == Tile.GOAL] = Tile.GOALBOX
+        player_x, player_y = random.choice(np.argwhere(self.tiles == Tile.SPACE))
 
     def __copy__(self) -> "Map":
         """
