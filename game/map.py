@@ -14,6 +14,7 @@ class Tile(Enum):
     SPACE = auto()
 
 Pos = tuple[int, int]
+dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 _char_tiles = {
     '#': Tile.WALL,
     '$': Tile.BOX,
@@ -297,6 +298,19 @@ class Map:
         self.tiles[self.tiles == Tile.GOAL] = Tile.GOALBOX
         player_x, player_y = random.choice(np.argwhere(self.tiles == Tile.SPACE))
 
+    def __copy__(self) -> "Map":
+        """
+        Copies the map.
+
+        Returns:
+            Map: The copied map.
+        """
+        new_map = Map()
+        new_map.tiles = np.copy(self.tiles)
+        new_map.scale = self.scale
+        new_map.player_x, new_map.player_y = self.player_x, self.player_y
+        return new_map
+
     def p_move(self, dx: int, dy: int) -> "Map":
         """
         Moves the player in a given direction.
@@ -307,22 +321,16 @@ class Map:
 
         Returns:
         - The new state after moving the player.
-
+        
         """
         new_x = self.player_x + dx
         new_y = self.player_y + dy
         # assert self.is_player(self.player_x, self.player_y), "Only the player can move."
 
-        # check if the player will move into the wall
-        if self.is_wall(new_x, new_y):
-            return self
-
         # check if the player will push a box
         if self.is_box(new_x, new_y):
             if self._push(new_x, new_y, dx, dy):
                 return self.p_move(dx, dy)
-            else:
-                return self
 
         # move freely
         # move off
@@ -353,21 +361,10 @@ class Map:
         Returns:
         - True if the box can be pushed, False otherwise.
         """
-        return not (self.is_blocked(x+dx, y+dy) or self.is_blocked(x-dx, y-dy))
+        return not (self.is_blocked(x+dx, y+dy) or self.is_blocked(x-dx, y-dy)) \
+            and self.is_box(x, y)
 
     def _push(self, x: int, y: int, dx: int, dy: int) -> bool:
-        """
-        Pushes a box in a given direction.
-
-        Args:
-        - x: The x-coordinate of the box.
-        - y: The y-coordinate of the box.
-        - dx: The change in x-coordinate.
-        - dy: The change in y-coordinate.
-
-        Returns:
-        - True if the box can be pushed, False otherwise.
-        """
         if not self.can_push(x, y, dx, dy):
             return False
         
@@ -379,6 +376,7 @@ class Map:
             self.set_tile(x, y, Tile.GOAL)
         else:
             self.set_tile(x, y, Tile.SPACE)
+        
         # push onto
         if self.is_goal(new_x, new_y):
             self.set_tile(new_x, new_y, Tile.GOALBOX)
@@ -386,15 +384,18 @@ class Map:
             self.set_tile(new_x, new_y, Tile.BOX)
         return True
     
-    def count_deadlock(self) -> int:
+    def count_deadlock(self, _boxes: np.ndarray) -> int:
         """
         Counts the number of boxes in deadlock.
+        
+        Args:
+            boxes (np.ndarray): The positions of the boxes
         
         Returns:
             int: The number of boxes in deadlock.
         """
-        boxes = self.locate_boxes()
         map = copy(self)
+        boxes = copy(_boxes)
         while np.any(boxes):
             to_delete = []
             for i, (x, y) in enumerate(boxes):
@@ -411,14 +412,13 @@ class Map:
             boxes = np.delete(boxes, to_delete, axis=0)
         return boxes.shape[0]
     
-    def player_to_boxes(self) -> int:
+    def player_to_boxes(self, boxes) -> int:
         """
         Calculates the minimum cost for the player to reach the boxes.
 
         Returns:
             int: The minimum cost for the player to reach the boxes.
         """
-        boxes = self.locate_boxes()
         player = np.array((self.player_x, self.player_y)).reshape(1,2)
         cost_matrix = self.cost_matrix(player, boxes)
         return np.amin(cost_matrix).item()
@@ -435,7 +435,8 @@ class Map:
         cost_matrix = self.cost_matrix(boxes, goals)
         return np.amin(cost_matrix, axis=0).sum().item()
     
-    def cost_matrix(self, pos1: np.ndarray, pos2: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def cost_matrix(pos1: np.ndarray, pos2: np.ndarray) -> np.ndarray:
         """
         Calculates the cost matrix between two sets of positions.
 
@@ -448,3 +449,89 @@ class Map:
         """
         distances = np.abs(pos1[:, np.newaxis, :] - pos2[np.newaxis, :, :])
         return distances.sum(axis=2)
+    
+    def set_to_goal(self, num: int = 10) -> List["Map"]:
+        """
+        Sets all boxes to their designated places.
+
+        Returns:
+            None
+        """
+        if self.is_goal(self.player_x, self.player_y) == Tile.GOALPLAYER:
+            self.set_tile(self.player_x, self.player_y, Tile.GOAL)
+        else:
+            self.set_tile(self.player_x, self.player_y, Tile.SPACE)
+        self.tiles[self.tiles == Tile.BOX] = Tile.SPACE
+        self.tiles[self.tiles == Tile.GOAL] = Tile.GOALBOX
+        boxes = self.locate_boxes()
+        goals = []
+        n = 0
+        for dir in dirs:
+            for box in boxes:
+                if self.is_space(box[0]+dir[0], box[1]+dir[1]):
+                    if n > num:
+                        break
+                    n += 1
+                    new_map = copy(self)
+                    new_map.set_tile(box[0]+dir[0], box[1]+dir[1], Tile.PLAYER)
+                    new_map.locate_player()
+                    goals.append(new_map)
+        return goals
+        
+    def can_pull(self, x, y, dx, dy) -> bool:
+        """
+        Checks if a box can be pulled in a given direction.
+
+        Args:
+        - x: The x-coordinate of the box.
+        - y: The y-coordinate of the box.
+        - dx: The change in x-coordinate.
+        - dy: The change in y-coordinate.
+
+        Returns:
+        - True if the box can be pulled, False otherwise.
+        """
+        return not (self.is_blocked(x+dx, y+dy) or self.is_blocked(x+2*dx, y+2*dy))\
+            and self.is_box(x, y)
+    
+    def _pull(self, x: int, y: int, dx: int, dy: int) -> bool:
+        if not self.can_pull(x, y, dx, dy):
+            return False
+        
+        new_x = x + dx
+        new_y = y + dy
+        
+        # pull off
+        if self.is_goal(x, y):
+            self.set_tile(x, y, Tile.GOAL)
+        else:
+            self.set_tile(x, y, Tile.SPACE)
+        
+        # pull onto
+        if self.is_goal(new_x, new_y):
+            self.set_tile(new_x, new_y, Tile.GOALBOX)
+        else:
+            self.set_tile(new_x, new_y, Tile.BOX)
+        return True
+    
+    def p_undo(self, dx, dy, pull: bool = True) -> None:
+        last_x = self.player_x - dx
+        last_y = self.player_y - dy
+        
+        # move off
+        if self.is_goal(self.player_x, self.player_y):
+            self.set_tile(self.player_x, self.player_y, Tile.GOAL)
+        else:
+            self.set_tile(self.player_x, self.player_y, Tile.SPACE)
+        # move onto
+        if self.is_goal(last_x, last_y):
+            self.set_tile(last_x, last_y, Tile.GOALPLAYER)
+        else:
+            self.set_tile(last_x, last_y, Tile.PLAYER)
+        # pull boxes
+        if pull:
+            self._pull(self.player_x + dx, self.player_y + dy, -dx, -dy)
+        
+        self.player_x -= dx
+        self.player_y -= dy
+        return self

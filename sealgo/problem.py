@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Generator
 from enum import Enum, auto
 
 class State(ABC):
@@ -90,7 +90,7 @@ class BiSearchProblem(SearchProblem):
     
     Methods(must be realized in subclasses):
         initial_state(self) -> State: Return the initial state from which the problem is to be solved.
-        goal_state(self) -> List[State]: Return the goal states of the problem.
+        goal_states(self) -> Generator[State]: Return the goal states of the problem.
         actions(self, state: State) -> list: Return a list of actions that can be executed in the given state.
         actions_to(self, state: State) -> list: Return a list of actions that can be executed in the given state.
         result(self, state: State, action: Action) -> State: Return the state that results from executing a given action in the given state.
@@ -98,6 +98,7 @@ class BiSearchProblem(SearchProblem):
         is_goal(self, state: State) -> bool: Check if the given state is a goal state.
         action_cost(self, s: State, action: Action) -> int|float: Return the cost of taking action from state to another state.
         heuristic(state: State) -> float: Returns the heuristic value of the given state.
+        b_heuristic(state: State) -> float: Returns the backward heuristic value of the given state.
     """
     @abstractmethod
     def goal_states(self, state: State) -> List[State]:
@@ -109,6 +110,10 @@ class BiSearchProblem(SearchProblem):
     
     @abstractmethod
     def reason(self, state: State, action: Action) -> State:
+        pass
+    
+    @abstractmethod
+    def re_heuristic(self, state: State) -> int|float:
         pass
     
 class GameState(ABC):

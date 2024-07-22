@@ -1,6 +1,7 @@
 from enum import Enum, auto
 from typing import TypeAlias, List
 from functools import lru_cache
+import numpy as np
 from scipy.optimize import linear_sum_assignment
 from sealgo.problem import HeuristicSearchProblem, Action
 
@@ -17,7 +18,6 @@ _action_dirs:dict[int,tuple[int,int]] = {
     SokobanAction.DOWN: (1, 0),
     SokobanAction.LEFT: (0, -1),
     SokobanAction.RIGHT: (0, 1),
-    Action.STAY: (0, 0)
 }
 
 class SokobanProblem(HeuristicSearchProblem):
@@ -79,7 +79,7 @@ class SokobanProblem(HeuristicSearchProblem):
             if map.is_wall(new_x, new_y):
                 continue
             if map.is_box(new_x, new_y):
-                if map.is_wall(new_x + dir[0], new_y + dir[1]) or map.is_box(new_x + dir[0], new_y + dir[1]):
+                if not map.can_push(new_x, new_y, dir[0], dir[1]):
                     continue
             actions.append(action)
         return actions
@@ -141,25 +141,26 @@ class SokobanProblem(HeuristicSearchProblem):
         - The heuristic value of the state.
 
         """
-        return 3*self._min_perfect_matching(map) + map.player_to_boxes() + self._deadlock_punishment(map)
+        boxes = map.locate_boxes()
+        goals = map.locate_goals()
+        return 3*self._min_perfect_matching(boxes, goals) + map.player_to_boxes(boxes) + self._deadlock_punishment(map, boxes)
     
-    def _min_perfect_matching(self, map: Map) -> int:
+    def _min_perfect_matching(self, boxes: np.ndarray, goals: np.ndarray) -> int:
         """
         Calculates the minimum perfect matching between the boxes and the goals.
 
         Args:
-            state (Map): The current state of the Sokoban problem.
+            boxes (np.ndarray): The boxes in the state.
+            goals (np.ndarray): The goals in the state.
 
         Returns:
             int: The heuristic value.
         """
-        boxes = map.locate_boxes()
-        goals = map.locate_goals()
-        cost_matrix = map.cost_matrix(boxes, goals)
+        cost_matrix = Map.cost_matrix(boxes, goals)
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
         return cost_matrix[row_ind, col_ind].sum()
     
-    def _deadlock_punishment(self, map: Map) -> int:
+    def _deadlock_punishment(self, map: Map, boxes: np.ndarray) -> int:
         """
         Calculates the punishment for deadlocks.
 
@@ -169,4 +170,4 @@ class SokobanProblem(HeuristicSearchProblem):
         Returns:
             int: The heuristic value.
         """
-        return 50 if map.count_deadlock() else 0
+        return 50 if map.count_deadlock(boxes) else 0
