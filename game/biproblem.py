@@ -1,4 +1,4 @@
-from typing import TypeAlias, List, Generator
+from typing import TypeAlias, List, Generator, Tuple
 from copy import copy
 from functools import lru_cache
 from sealgo.problem import BiSearchProblem, Action, State
@@ -38,15 +38,17 @@ class BiSokobanProblem(SokobanProblem, BiSearchProblem):
             last_x, last_y = map.player_x - dir[0], map.player_y - dir[1]
             if map.is_blocked(last_x, last_y):
                 continue
-            actions.append(action)
+            actions.append((action, False))
+            if map.can_pull(map.player_x+dir[0], map.player_y+dir[1], -dir[0], -dir[1]):
+                actions.append((action, True))
         return actions
     
-    def reason(self, map: Map, action: SokobanAction) -> Map:
+    def reason(self, map: Map, action: Tuple[SokobanAction, bool]|Action) -> Map:
         last_map = copy(map)
         del map
         if action == Action.STAY:
             return last_map
-        last_map.p_undo(_action_dirs[action][0], _action_dirs[action][1])
+        last_map.p_undo(_action_dirs[action[0]][0], _action_dirs[action[0]][1], pull=action[1])
         return last_map
     
     @lru_cache(maxsize=1_000_000)

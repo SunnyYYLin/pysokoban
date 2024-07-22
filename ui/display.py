@@ -1,5 +1,4 @@
 import pygame
-import os
 from enum import Enum, auto
 from typing import Dict, Tuple, TypeAlias
 from .input_handler import Event

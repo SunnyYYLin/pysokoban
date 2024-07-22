@@ -3,13 +3,11 @@ import os
 import logging
 from datetime import datetime
 from typing import Dict
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from ui.display import Display, State
 from ui.input_handler import InputHandler, Event
 from generation.mcts import mcts
 from generation.generate import generate
-from sealgo.bidirectional import BiAStar as AI
+from sealgo.best_first_search import AStar as AI
 
 from .problem import SokobanProblem, SokobanAction
 from .biproblem import BiSokobanProblem
@@ -102,11 +100,10 @@ class Game:
         self.lvl_num = start_lvl
         for lvl_num in range(start_lvl, end_lvl + 1):
             self._load_level(lvl_num)
-            problem = BiSokobanProblem(self.map)
             start_time = os.times()
             solutions = []
             while len(solutions) == 0:
-                ai = AI(problem)
+                ai = AI(self.problem)
                 solutions = ai.search()
             finish_time = os.times()
             elapsed_time = finish_time.elapsed - start_time.elapsed
