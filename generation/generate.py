@@ -112,6 +112,14 @@ class Generate_map:
         if reward>67:
             print('reward')
             print(reward)
+            self.show_map=Map()
+            self.show_map.tiles=np.full((self.width+2, self.height+2),
+                                     fill_value=Tile.WALL,
+                                     dtype=object)
+            self.show_map.scale = self.show_map.tiles.shape
+            for i in range(self.width):
+                for j in range(self.height):
+                    self.show_map.set_tile(i+1, j+1, self.map.tiles[i][j])
         else:        
             self.restart()
         self.all_time=0
