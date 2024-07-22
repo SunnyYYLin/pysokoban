@@ -286,6 +286,30 @@ class Map:
             if Tile.BOX in row:
                 return False
         return True
+    
+    def set_to_goal(self) -> None:
+        """
+        Sets all boxes to their designated places.
+
+        Returns:
+            None
+        """
+        self.tiles[self.tiles == Tile.BOX] = Tile.SPACE
+        self.tiles[self.tiles == Tile.GOAL] = Tile.GOALBOX
+        player_x, player_y = random.choice(np.argwhere(self.tiles == Tile.SPACE))
+
+    def __copy__(self) -> "Map":
+        """
+        Copies the map.
+
+        Returns:
+            Map: The copied map.
+        """
+        new_map = Map()
+        new_map.tiles = np.copy(self.tiles)
+        new_map.scale = self.scale
+        new_map.player_x, new_map.player_y = self.player_x, self.player_y
+        return new_map
 
     def p_move(self, dx: int, dy: int) -> "Map":
         """
