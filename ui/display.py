@@ -19,7 +19,7 @@ class State(Enum):
     SOLVING = auto()
     
 class Display:
-    def __init__(self, icon_paths: str, scale: Point2D = (800, 600)):
+    def __init__(self, icon_paths: str, scale: Point2D = (1600, 1200)):
         self.scale = scale
         self.screen = pygame.display.set_mode(self.scale)
         self.state = State.START_MENU
