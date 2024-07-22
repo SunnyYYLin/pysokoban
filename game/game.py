@@ -41,7 +41,7 @@ class Game:
         test(self, end_lvl: int = 20): Runs a test on multiple levels.
     """
 
-    def __init__(self, lvl_num: int = 0, icon_style: str = "image_v1"):
+    def __init__(self, lvl_num: int = 1, icon_style: str = "image_v1"):
         """
         Initializes the Game object.
 
@@ -87,7 +87,7 @@ class Game:
             start_level (int): The level number to start from. Default is 1.
         """
         clock = pygame.time.Clock()
-        self.lvl_num = start_level - 1
+        self.lvl_num = start_level
         while self.running:
             self._handle_event()
             clock.tick(60)
@@ -237,7 +237,7 @@ class Game:
         Handles generating events.
         """
         state= generate()
-        
         self.problem = SokobanProblem(state.show_map)
         self.map = state.show_map
+        self.map.locate_player()
         self.display.state = State.GAMING

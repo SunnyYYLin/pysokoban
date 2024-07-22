@@ -90,7 +90,6 @@ class Map:
         """
         if level_file != '':
             self._load(level_file)
-        if hasattr(self, 'tiles'):
             self.scale = self.tiles.shape
             self.player_x, self.player_y = self.locate_player()
             
@@ -105,6 +104,19 @@ class Map:
     
     def __lt__(self, other: "Map") -> bool:
         return hash(self) < hash(other)
+    
+    def __copy__(self) -> "Map":
+        """
+        Copies the map.
+
+        Returns:
+            Map: The copied map.
+        """
+        new_map = Map()
+        new_map.tiles = np.copy(self.tiles)
+        new_map.scale = self.scale
+        new_map.player_x, new_map.player_y = self.player_x, self.player_y
+        return new_map
 
     def _load(self, level_file: str) -> None:
         """
@@ -131,7 +143,8 @@ class Map:
         """
         player_pos = np.where((self.tiles == Tile.PLAYER) | (self.tiles == Tile.GOALPLAYER))
         assert len(player_pos[0]) == 1, "There should be only one player in the map."
-        return player_pos[0][0], player_pos[1][0]
+        self.player_x, self.player_y = player_pos[0][0], player_pos[1][0]
+        return self.player_x, self.player_y
 
     def locate_boxes(self) -> np.ndarray:
         """
@@ -283,19 +296,6 @@ class Map:
         self.tiles[self.tiles == Tile.BOX] = Tile.SPACE
         self.tiles[self.tiles == Tile.GOAL] = Tile.GOALBOX
         player_x, player_y = random.choice(np.argwhere(self.tiles == Tile.SPACE))
-
-    def __copy__(self) -> "Map":
-        """
-        Copies the map.
-
-        Returns:
-            Map: The copied map.
-        """
-        new_map = Map()
-        new_map.tiles = np.copy(self.tiles)
-        new_map.scale = self.scale
-        new_map.player_x, new_map.player_y = self.player_x, self.player_y
-        return new_map
 
     def p_move(self, dx: int, dy: int) -> "Map":
         """

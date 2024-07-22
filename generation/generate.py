@@ -1,6 +1,6 @@
 from game.map import Map, Tile
 import numpy as np
-from ui.display import Display
+import logging
 import random
 
 class Generate_map:
@@ -110,8 +110,7 @@ class Generate_map:
         value = Value(map=self.map)
         reward = value.reward#-self.all_time*0.0005
         if reward>=85:
-            print('reward')
-            print(reward)
+            logging.debug(f"Reward: {reward}")
             self.show_map=Map()
             self.show_map.tiles=np.full((self.width+2, self.height+2),
                                      fill_value=Tile.WALL,
