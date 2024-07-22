@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from ui.display import Display, State
 from ui.input_handler import InputHandler, Event
 from generation.mcts import mcts
-from generation.generate import Generate_map
+from generation.generate import generate
 from sealgo.best_first_search import AStar as AI
 
 from .problem import SokobanProblem, SokobanAction
@@ -236,10 +236,9 @@ class Game:
         """
         Handles generating events.
         """
-        initialState = Generate_map(width=6,height=6)
-        searcher = mcts(timeLimit=6000)
-        map = searcher.search(initialState)
-        self.problem = SokobanProblem(map)
-        self.map = map
+        state= generate()
+        
+        self.problem = SokobanProblem(state.map)
+        self.map = state.map
         self.display.state = State.GAMING
         
