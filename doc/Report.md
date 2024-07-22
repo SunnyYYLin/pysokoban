@@ -12,9 +12,14 @@
 
 去除掉重复局面，每个推箱子问题的状态空间是有限的，那么在有限时间内（即使可能是超出多项式时间），用搜索算法搜索从初始状态到目标状态的路径就是可解的。问题的关键就是如何避免探索没有必要的状态，这包括达成目标的可能性很低的状态和后续已经无法达到目标的状态（称为死锁）。
 
-由于导致死锁的动作是单向的，并且推箱子问题又是完全可观测的，所以使用离线搜索是好过在线搜索（局部搜索）的。为了避免探索重复状态，甚至造成死循环，为状态类自定义哈希方法，并在搜索中比较即可。为了避免探索没有必要的状态，我们可以人工设计启发式函数和使用A\* 算法。为了避免在死锁的状态下持续探索下去，我们在启发式函数中加入一个十分大的死锁惩罚项。
+由于导致死锁的动作是单向的，并且推箱子问题又是完全可观测的，所以使用离线搜索是好过在线搜索（局部搜索）的。为了避免探索重复状态，甚至造成死循环，为状态类自定义哈希方法，并在搜索中比较即可。为了避免探索没有必要的状态，我们可以人工设计启发式函数和使用A\* 算法。启发式函数需要精心设计。一个好的启发式函数可以大大减少搜索空间，提高搜索效率。启发式函数的主要要求是：
 
-有一种方法可以判断出大部分的死锁。多次遍历每个箱子，如果这个箱子可以被推动，就让他消失；继续遍历，如果某一轮还有箱子，但遍历一次并未消去任何箱子，那么可以知道后续的遍历也不能消去这些箱子，即局面出现了死锁。
+1. 一致性：启发式函数满足三角不等式，即对于任意状态$n$和其邻接状态$n'$，$h(n) \leq c(n, n') + h(n')$，其中$h(n)$为启发式函数值，$c(n, n')$为从$n$到$n'$的实际代价。
+2. 可接受性：启发式函数永远不会高估从当前状态到目标状态的代价，即$h(n) \leq\hat{h}(n)$，其中$\hat{h}(n)$为从$n$到目标状态的实际最小代价。
+
+为了避免在死锁的状态下持续探索下去，我们首先在启发式函数中加入一个十分大的死锁惩罚项。有一种方法可以判断出大部分的死锁。多次遍历每个箱子，如果这个箱子可以被推动，就让他消失；继续遍历，如果某一轮还有箱子，但遍历一次并未消去任何箱子，那么可以知道后续的遍历也不能消去这些箱子，即局面出现了死锁。
+
+其次，在推箱子问题中，箱子需要被推到特定的目标位置上。为了更好地估计从当前状态到目标状态的代价，我们可以利用最小最优匹配来计算启发式函数。最小最优匹配其实就是找到如何将箱子分配给各个目标，使得箱子到目标的曼哈顿距离的总和最小。在求出耗费矩阵后，这个算法可以由`scipy.optimize.linear_sum_assignment`实现。
 
 ### 地图生成
 
@@ -74,14 +79,51 @@
 4. `is_goal(state)`：判断某个状态是否为目标状态。
 5. `step_cost(map, action)`：由于每一步的耗费都是相等的，所以统一返回1.
 
-此外，问题某个局面的启发值有`heuristic(map)`方法输出。这需要精心设计。
-
+此外，问题某个局面的启发值有`heuristic(map)`方法输出。
 ### 搜索算法
 
 在本学期人工智能原理的课程作业中，我们写过一个搜索算法的库`sealgo`，意思是`SEArch ALGOrithms`。这次在稍加完善后可以使用。`sealgo`中包含许多局部搜索（`local_search.py`）与最佳优先搜索（`best_first_search.py`）算法，便于我们实验和分析哪种更适用于推箱子问题。每个算法接受一个问题作为参数初始化`Search(problem)`，使用`search()`方法搜索答案并返回解的列表，每个解是一系列动作的列表。经过实验和分析，我们选择了A\*算法，所以以下主要介绍A\*算法。
 
-#TODO
+```python
+class AStar(BestFirstSearch):
+    def __init__(self, problem:HeuristicSearchProblem, weight:float|int=1):
+        super().__init__(problem)
+        def eval_f(state: State) -> int|float:
+            return self.g_costs[state] + \
+                weight * self.problem.heuristic(state)
+        self.eval_f = eval_f
+```
 
+`AStar`继承自抽象父类`BestFirstSearch`，另外还包含一个权重参数，其对每个状态节点的评价函数`eval_f`为：$$f(n):=g(n)+h(n)$$其中$g(n)$为累计代价，即到达该状态的路径代价的总和， $h(n)$为预估代价，即启发式函数给出的到达目标节点的近似路径代价。
+```python
+class BestFirstSearch(Search):
+    def __init__(self, problem:SearchProblem) -> None:
+        self.problem = problem
+        self.frontier = PriorityQueue()
+        self.g_costs = {self.problem.initial_state(): 0} # cost so far
+        self.predecessors = {self.problem.initial_state(): (None, Action.STAY)}
+        self.frontier.put((-1, problem.initial_state()))
+        def eval_f(state: State) -> int|float:
+            return 1
+        self.eval_f = eval_f
+        # self.eval_f must be defined in the subclass
+        
+    def search(self) -> List[List[Action]]:
+        while not self.frontier.empty():
+            state = self.frontier.get()[1]
+            if self.problem.is_goal(state):
+                return [self._reconstruct_path(state)]
+            for action in self.problem.actions(state):
+                next_state = self.problem.result(state, action)
+                g_cost = self.g_costs[state] + self.problem.action_cost(state, action)
+                if next_state not in self.g_costs or g_cost < self.g_costs[next_state]:
+                    self.predecessors[next_state] = (state, action)
+                    self.g_costs[next_state] = g_cost
+                    eval = self.eval_f(next_state)
+                    self.frontier.put((eval, next_state))
+        return []
+```
+`BestFirstSearch`用优先队列储存其探索的前沿，优先队列中状态的优先级即为`eval_f(state)`，每次都取出优先级最高的节点探索，并将可拓展的节点加入优先队列。此外，`g_costs`储存了到达每个节点的最小路径代价。`predecessors`储存了每个节点的父节点，在搜索到目标节点时，就可以通过`_reconstruct_path(state)`重构到达目标节点的路径。
 ### 显示`Display`
 
 `Display`模块在`ui/display.py`实现，负责图形用户界面的显示，初始化时会加载材质，材质风格在`assets/`中储存，可以在启动时被命令行参数`--icon-style`指定。枚举类`State`定义了GUI的可能状态：开始菜单、游戏中、主菜单（暂停菜单）、胜利菜单、AI解决中、关卡生成中。每种菜单状态下分别由一种私有方法渲染，由方法`run()`判断。
@@ -95,6 +137,20 @@
 ## 算法复杂度分析
 
 ### A\*搜索算法
+
+#### 最坏复杂度
+
+在A\*算法中，时间复杂度主要受以下因素影响：
+
+1. **搜索空间大小**：即状态空间的大小，设为$N$。
+2. **启发式函数的质量**：启发式函数越准确，搜索空间越小，时间复杂度越低。
+
+在最坏情况下，A\*算法的时间复杂度为$O(b^d)$，其中$b$为每个状态可能的后继状态数（分支因子），$d$为从初始状态到目标状态的最短路径长度。在推箱子问题中，分支因子小于4，因为每个箱子最多可以朝4个方向移动。所以其最坏时间复杂度为$O(b^4)$。
+
+A\*算法的最坏空间复杂度与时间复杂度相同，也是$O(b^4)$，因为A\*算法需要在`frontier`中储存探索前沿的节点，同时在`f_costs`与`predecessors`中储存已经探索过的节点。
+#### 实际复杂度
+
+在每个问题中的平均分支因子$\hat{b}$可以由：$$\hat{b}=\log_dn$$得到，其中$d$为路径长度，$n$为探索的节点数量。经过实验，如此设计启发式函数，分支因子大多位于2~3。当个别关卡超过3时，搜索可能就需要超过一分钟甚至一小时！
 
 ## 结果分析
 

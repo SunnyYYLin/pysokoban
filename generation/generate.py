@@ -1,7 +1,7 @@
 from game.map import Map, Tile
 import numpy as np
 from copy import deepcopy
-from generate.mcts import mcts
+from .mcts import mcts
 from ui.display import Display
 
 class Generate_map:

@@ -1,5 +1,7 @@
 from queue import PriorityQueue, Queue, LifoQueue
 from typing import List
+import logging
+import math
 
 from .search import Search
 from .problem import *
@@ -8,9 +10,10 @@ class BestFirstSearch(Search):
     def __init__(self, problem:SearchProblem) -> None:
         self.problem = problem
         self.frontier = PriorityQueue()
+        self.g_costs = {self.problem.initial_state(): 0} # cost so far
         self.predecessors = {self.problem.initial_state(): (None, Action.STAY)}
         self.frontier.put((-1, problem.initial_state()))
-        def eval_f(state: State, action: Action) -> int|float:
+        def eval_f(state: State) -> int|float:
             return 1
         self.eval_f = eval_f
         # self.eval_f must be defined in the subclass
@@ -22,10 +25,12 @@ class BestFirstSearch(Search):
                 return [self._reconstruct_path(state)]
             for action in self.problem.actions(state):
                 next_state = self.problem.result(state, action)
-                if next_state not in self.predecessors:
-                    cost = self.eval_f(state, action)
+                g_cost = self.g_costs[state] + self.problem.action_cost(state, action)
+                if next_state not in self.g_costs or g_cost < self.g_costs[next_state]:
                     self.predecessors[next_state] = (state, action)
-                    self.frontier.put((cost, next_state))
+                    self.g_costs[next_state] = g_cost
+                    eval = self.eval_f(next_state)
+                    self.frontier.put((eval, next_state))
         return []
     
     def _reconstruct_path(self, state: State) -> List[Action]:
@@ -33,6 +38,7 @@ class BestFirstSearch(Search):
         while state:
             state, action = self.predecessors[state]
             actions.append(action)
+        logging.info(f"b-factor: {math.log(len(self.predecessors), len(actions))}")
         actions.reverse()
         return actions
 
@@ -92,19 +98,22 @@ class IDS(Search):
 class Dijkstra(BestFirstSearch):
     def __init__(self, problem:SearchProblem):
         super().__init__(problem)
-        self.eval_f = self.problem.action_cost
+        def eval_f(state: State) -> int|float:
+            return self.g_costs[state]
         
 class GBFS(BestFirstSearch):
     def __init__(self, problem:HeuristicSearchProblem):
         super().__init__(problem)
-        def eval_f(state: State, action: Action) -> int|float:
-            return self.problem.heuristic(self.problem.result(state, action))
+        def eval_f(state: State) -> int|float:
+            return self.problem.heuristic(state)
+        self.eval_f = eval_f
         
 class AStar(BestFirstSearch):
     def __init__(self, problem:HeuristicSearchProblem, weight:float|int=1):
         super().__init__(problem)
-        def eval_f(state: State, action: Action) -> int|float:
-            return self.problem.action_cost(state, action) + weight * self.problem.heuristic(state)
+        def eval_f(state: State) -> int|float:
+            return self.g_costs[state] + \
+                weight * self.problem.heuristic(state)
         self.eval_f = eval_f
         
 class BiBFS(Search):
