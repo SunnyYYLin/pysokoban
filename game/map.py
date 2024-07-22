@@ -89,7 +89,9 @@ class Map:
             None
         """
         if level_file != '':
-            self.scale: Pos = self._load(level_file)
+            self._load(level_file)
+        if hasattr(self, 'tiles'):
+            self.scale = self.tiles.shape
             self.player_x, self.player_y = self.locate_player()
             
     def __str__(self) -> str:
@@ -104,7 +106,7 @@ class Map:
     def __lt__(self, other: "Map") -> bool:
         return hash(self) < hash(other)
 
-    def _load(self, level_file: str) -> Pos:
+    def _load(self, level_file: str) -> None:
         """
         Loads the map from a level file.
 
@@ -119,7 +121,6 @@ class Map:
             for line in file:
                 tiles.append([_char_tiles[char] for char in line.rstrip('\n')])
         self.tiles = np.array(tiles, dtype=object)
-        return tuple(self.tiles.shape)
 
     def locate_player(self) -> Pos:
         """
