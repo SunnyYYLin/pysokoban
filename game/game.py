@@ -238,7 +238,6 @@ class Game:
         """
         state= generate()
         
-        self.problem = SokobanProblem(state.map)
-        self.map = state.map
+        self.problem = SokobanProblem(state.show_map)
+        self.map = state.show_map
         self.display.state = State.GAMING
-        
