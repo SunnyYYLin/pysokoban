@@ -2,12 +2,14 @@ import pygame
 import os
 import logging
 from datetime import datetime
+from copy import copy
 from typing import Dict
 from ui.display import Display, State
 from ui.input_handler import InputHandler, Event
 from generation.mcts import mcts
 from generation.generate import generate
 from sealgo.best_first_search import AStar as AI
+from sealgo.bidirectional import BiAStar
 
 from .problem import SokobanProblem, SokobanAction
 from .biproblem import BiSokobanProblem
@@ -103,7 +105,9 @@ class Game:
             start_time = os.times()
             solutions = []
             while len(solutions) == 0:
-                ai = AI(self.problem, weight=5)
+                # ai = AI(self.problem, weight=5)
+                biproblem = BiSokobanProblem(copy(self.map))
+                ai = BiAStar(biproblem)
                 solutions = ai.search()
             finish_time = os.times()
             elapsed_time = finish_time.elapsed - start_time.elapsed
@@ -212,7 +216,9 @@ class Game:
         """
         Handles solving events.
         """
-        ai = AI(self.problem, weight=5)
+        # ai = AI(self.problem, weight=5)
+        biproblem = BiSokobanProblem(copy(self.map))
+        ai = BiAStar(biproblem)
         solutions = ai.search()
         if len(solutions) == 0:
             logging.warning(f"Failed to find a solution for {self.lvl_num}")

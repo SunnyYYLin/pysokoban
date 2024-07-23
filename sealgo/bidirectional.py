@@ -42,12 +42,10 @@ class BiDirectional(Search):
         while not self.f_frontier.empty() and not self.b_frontier.empty():
             f_state = self.f_frontier.get()[1]
             b_state = self.b_frontier.get()[1]
-            if f_state in self.successors:
-                return [self._reconstruct_path(f_state)]
+            if b_state in self.predecessors:
+                return [self._reconstruct_path(b_state)]
             for action in self.problem.actions(f_state):
-                # d.render(f_state)
                 f_new_state = self.problem.result(f_state, action)
-                # d.render(f_new_state)
                 f_cost = self.f_costs[f_state] + self.problem.action_cost(f_state, action)
                 if f_new_state not in self.f_costs or f_cost < self.f_costs[f_new_state]:
                     self.predecessors[f_new_state] = (f_state, action)
@@ -55,9 +53,7 @@ class BiDirectional(Search):
                     f_eval = self.f_eval(f_new_state)
                     self.f_frontier.put((f_eval, f_new_state))
             for action in self.problem.actions_to(b_state):
-                # d.render(b_state)
                 b_new_state = self.problem.reason(b_state, action)
-                # d.render(b_new_state)
                 b_cost = self.b_costs[b_state] + self.problem.action_cost(b_new_state, action)
                 if b_new_state not in self.b_costs or b_cost < self.b_costs[b_new_state]:
                     self.successors[b_new_state] = (b_state, action)
@@ -74,7 +70,6 @@ class BiDirectional(Search):
             f_solution.append(self.predecessors[b_state][1])
             b_state = self.predecessors[b_state][0]
         f_solution.reverse()
-        f_solution.pop()
         
         b_solution = []
         f_state = inter_state

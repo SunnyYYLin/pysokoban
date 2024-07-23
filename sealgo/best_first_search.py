@@ -3,6 +3,8 @@ from typing import List
 import logging
 import math
 
+from sealgo.problem import State
+
 from .search import Search
 from .problem import *
 
@@ -23,15 +25,18 @@ class BestFirstSearch(Search):
             state = self.frontier.get()[1]
             if self.problem.is_goal(state):
                 return [self._reconstruct_path(state)]
-            for action in self.problem.actions(state):
-                next_state = self.problem.result(state, action)
-                g_cost = self.g_costs[state] + self.problem.action_cost(state, action)
-                if next_state not in self.g_costs or g_cost < self.g_costs[next_state]:
-                    self.predecessors[next_state] = (state, action)
-                    self.g_costs[next_state] = g_cost
-                    eval = self.eval_f(next_state)
-                    self.frontier.put((eval, next_state))
+            self._extend(state)
         return []
+    
+    def _extend(self, state: State) -> None:
+        for action in self.problem.actions(state):
+            next_state = self.problem.result(state, action)
+            g_cost = self.g_costs[state] + self.problem.action_cost(state, action)
+            if next_state not in self.g_costs or g_cost < self.g_costs[next_state]:
+                self.predecessors[next_state] = (state, action)
+                self.g_costs[next_state] = g_cost
+                eval = self.eval_f(next_state)
+                self.frontier.put((eval, next_state))
     
     def _reconstruct_path(self, state: State) -> List[Action]:
         actions = []
@@ -54,12 +59,15 @@ class BFS(BestFirstSearch):
             state = self.frontier.get()
             if self.problem.is_goal(state):
                 return [self._reconstruct_path(state)]
-            for action in self.problem.actions(state):
-                next_state = self.problem.result(state, action)
-                if next_state not in self.predecessors:
-                    self.predecessors[next_state] = (state, action)
-                    self.frontier.put(next_state)
+            self._extend(state)
         return []
+    
+    def _extend(self, state: State) -> None:
+        for action in self.problem.actions(state):
+            next_state = self.problem.result(state, action)
+            if next_state not in self.predecessors:
+                self.predecessors[next_state] = (state, action)
+                self.frontier.put(next_state)
     
 class DFS(BestFirstSearch):
     def __init__(self, problem:SearchProblem, max_depth = 100):
