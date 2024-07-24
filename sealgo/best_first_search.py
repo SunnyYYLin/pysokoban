@@ -1,8 +1,5 @@
 from queue import PriorityQueue, Queue, LifoQueue
 from typing import List, Callable
-import logging
-import math
-import os
 
 from sealgo.problem import State
 
@@ -69,7 +66,6 @@ class BestFirstSearch(Search):
         while state:
             state, action = self.predecessors[state]
             actions.append(action)
-        logging.info(f"b-factor: {math.log(len(self.predecessors), len(actions))}")
         actions.reverse()
         return actions
 

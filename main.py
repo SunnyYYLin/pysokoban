@@ -1,9 +1,10 @@
-import pygame
 import argparse
-from game.game import Game
 import logging
 from datetime import datetime
 import os
+import pygame
+import numpy as np
+from game.game import Game
 
 def main():
     parser = argparse.ArgumentParser(description="Sokoban Game")
@@ -23,8 +24,8 @@ def main():
                         ])
     pygame.init()
     game = Game(lvl_num=args.level, icon_style=args.icon_style)
-    if args.test or True:
-        game.test()
+    if args.test:
+        game.test(b_weights=[1, 10, 100, 1000, np.inf])
     else:
         game.run()
 

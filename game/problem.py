@@ -154,7 +154,7 @@ class SokobanProblem(HeuristicSearchProblem):
         """
         boxes = map.locate_boxes()
         goals = map.locate_goals()
-        return 3*self._min_perfect_matching(boxes, goals) + map.player_to_boxes(boxes) + self._deadlock_punishment(map, boxes)
+        return self._min_perfect_matching(boxes, goals) + map.player_to_boxes(boxes) + self._deadlock_punishment(map, boxes)
     
     def _min_perfect_matching(self, boxes: np.ndarray, goals: np.ndarray) -> int:
         """

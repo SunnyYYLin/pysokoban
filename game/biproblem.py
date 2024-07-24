@@ -2,7 +2,6 @@ from typing import TypeAlias, List, Generator, Tuple
 from copy import copy
 from functools import lru_cache
 from sealgo.problem import BiSearchProblem, Action, State
-from scipy.optimize import linear_sum_assignment
 
 from .map import Map
 from .problem import SokobanAction, SokobanProblem, _action_dirs
@@ -57,7 +56,7 @@ class BiSokobanProblem(SokobanProblem, BiSearchProblem):
     @lru_cache(maxsize=1_000_000)
     def re_heuristic(self, map: Map) -> int:
         boxes = map.locate_boxes()
-        return 3*self._min_perfect_matching(boxes, self.init_boxes) + self._player_to_start(map)
+        return self._min_perfect_matching(boxes, self.init_boxes) + self._player_to_start(map)
         
     def _player_to_start(self, map: Map) -> int:
         return abs(map.player_x - self.level.player_x) + abs(map.player_y - self.level.player_y)

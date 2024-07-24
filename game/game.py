@@ -1,15 +1,18 @@
 import pygame
 import os
+import json
 import logging
 from datetime import datetime
 from copy import copy
 from typing import Dict
+import math
+import numpy as np
 from ui.display import Display, State
 from ui.input_handler import InputHandler, Event
 from generation.mcts import mcts
 from generation.generate import generate
-from sealgo.best_first_search import AStar as AI
-from sealgo.bidirectional import BiAStar
+from sealgo.best_first_search import AStar
+from sealgo.bidirectional import BiDirectional
 
 from .problem import SokobanProblem, SokobanAction
 from .biproblem import BiSokobanProblem
@@ -54,7 +57,7 @@ class Game:
         """
         self.lvl_num = lvl_num
         self.input_handler = InputHandler(key_actions)
-        icon_paths = {
+        self.icon_paths = {
             Tile.GOALBOX: os.path.join(assets_path, icon_style, "goalbox.png"),
             Tile.GOALPLAYER: os.path.join(assets_path, icon_style, "goalplayer.png"),
             Tile.BOX: os.path.join(assets_path, icon_style, "box.png"),
@@ -63,7 +66,6 @@ class Game:
             Tile.PLAYER: os.path.join(assets_path, icon_style, "player.png"),
             Tile.SPACE: os.path.join(assets_path, icon_style, "space.png"),
         }
-        self.display = Display(icon_paths)
         self.running = True
         self.map = Map()
         logging.info(f"Game initialized at {datetime.now()}")
@@ -87,33 +89,46 @@ class Game:
         Args:
             start_level (int): The level number to start from. Default is 1.
         """
+        self.display = Display(self.icon_paths)
         clock = pygame.time.Clock()
         while self.running:
             self._handle_event()
             clock.tick(60)
 
-    def test(self, start_lvl: int = 0, end_lvl: int = 20):
+    def test(self, start_lvl: int = 0, end_lvl: int = 20, b_weights: list = [np.inf]):
         """
         Runs a test on multiple levels.
 
         Args:
             end_lvl (int): The last level number to test. Default is 20.
         """
+        results = {}
         self.lvl_num = start_lvl
-        for lvl_num in range(start_lvl, end_lvl + 1):
-            self._load_level(lvl_num)
-            start_time = os.times()
-            solutions = []
-            while len(solutions) == 0:
-                # ai = AI(self.problem, weight=5)
-                biproblem = BiSokobanProblem(copy(self.map))
-                ai = BiAStar(biproblem)
-                solutions = ai.search()
-            finish_time = os.times()
-            elapsed_time = finish_time.elapsed - start_time.elapsed
-            self.lvl_num += 1
-            logging.info(f"Level {lvl_num}: Solution found in {elapsed_time:.2f} seconds.")
-            logging.info(f"Solution length: {[len(solution) for solution in solutions]}")
+        for b_weight in b_weights:
+            results[b_weight] = {}
+            for lvl_num in range(start_lvl, end_lvl + 1):
+                self._load_level(lvl_num)
+                start_time = os.times()
+                solutions = []
+                while len(solutions) == 0:
+                    biproblem = BiSokobanProblem(copy(self.map))
+                    ai = BiDirectional(biproblem, AStar, b_weight = b_weight, weight = 3)
+                    solutions = ai.search()
+                finish_time = os.times()
+                elapsed_time = finish_time.elapsed - start_time.elapsed
+                self.lvl_num += 1
+                logging.info(f"Level {lvl_num}: Solution found in {elapsed_time:.2f} seconds.")
+                b_factor = math.log(len(ai.f_algo.predecessors)+len(ai.b_algo.predecessors), len(solutions[0]))
+                logging.info(f"b-factor: {b_factor:.2f}")
+                lengths = [len(solution) for solution in solutions]
+                logging.info(f"Solution length: {lengths}")
+                results[b_weight][lvl_num] = {
+                    "elapsed_time": elapsed_time,
+                    "b_factor": b_factor,
+                    "length": lengths[0],
+                }
+        with open(datetime.now().strftime(os.path.join("results","results.json")), "w") as f:
+            json.dump(results, f)
 
     def _handle_event(self):
         """
@@ -216,9 +231,8 @@ class Game:
         """
         Handles solving events.
         """
-        # ai = AI(self.problem, weight=5)
         biproblem = BiSokobanProblem(copy(self.map))
-        ai = BiAStar(biproblem)
+        ai = BiDirectional(biproblem, AStar, b_weight = np.inf, weight = 3)
         solutions = ai.search()
         if len(solutions) == 0:
             logging.warning(f"Failed to find a solution for {self.lvl_num}")
@@ -246,3 +260,4 @@ class Game:
         self.map = state.show_map
         self.map.locate_player()
         self.display.state = State.GAMING
+        

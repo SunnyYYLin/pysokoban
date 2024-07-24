@@ -24,25 +24,72 @@ from .best_first_search import BestFirstSearch, AStar
 # d = Display(icon_paths)
 
 class BiDirectional(Search):
-    def __init__(self, problem:BiSearchProblem, 
-                 f_algo: Type[BestFirstSearch], b_algo: Type[BestFirstSearch]|None = None) -> None:
+    """
+    BiDirectional class represents a bidirectional search algorithm.
+
+    Args:
+        problem (BiSearchProblem): The bidirectional search problem.
+        f_algo (Type[BestFirstSearch]): The forward search algorithm.
+        b_algo (Type[BestFirstSearch]|None, optional): The backward search algorithm. Defaults to None.
+        b_weight (int, optional): The the proportion of backwards to forwards, at least 1. Defaults to 1.
+        *args: Additional arguments to be passed to the search algorithms.
+        **kwargs: Additional keyword arguments to be passed to the search algorithms.
+
+    Attributes:
+        f_algo (BestFirstSearch): The forward search algorithm.
+        b_algo (BestFirstSearch): The backward search algorithm.
+        b_weight (int): The weight of the backward search.
+
+    Methods:
+        search(): Perform the bidirectional search and return the path from the initial state to the goal state.
+        _init_problem(problem: BiSearchProblem): Initialize the forward and backward search problems.
+        _reconstruct_path(inter_state: State): Reconstruct the path from the initial state to the goal state.
+
+    """
+
+    def __init__(self, problem: BiSearchProblem, f_algo: Type[BestFirstSearch], b_algo: Type[BestFirstSearch]|None = None, b_weight: int = 1, *args, **kwargs) -> None:
         self._init_problem(problem)
         if b_algo is None:
             b_algo = f_algo
-        self.f_algo = f_algo(self.f_problem)
-        self.b_algo = b_algo(self.b_problem)
+        if args or kwargs:
+            self.f_algo = f_algo(self.f_problem, *args, **kwargs)
+            self.b_algo = b_algo(self.b_problem, *args, **kwargs)
+        else:
+            self.f_algo = f_algo(self.f_problem)
+            self.b_algo = b_algo(self.b_problem)
+        self.b_weight = b_weight
         
     def search(self) -> List[List[Action]]:
+        """
+        Perform the bidirectional search and return the path from the initial state to the goal state.
+
+        Returns:
+            List[List[Action]]: The path from the initial state to the goal state.
+
+        """
+        b_times = 0
         while not self.f_algo.frontier.empty() and not self.b_algo.frontier.empty():
-            f_state = self.f_algo.frontier.get()[1]
+            if b_times >= self.b_weight:
+                b_times = 0
+                # forward search
+                f_state = self.f_algo.frontier.get()[1]
+                self.f_algo._extend(f_state)
+            # backward search
             b_state = self.b_algo.frontier.get()[1]
             if b_state in self.f_algo.predecessors:
                 return [self._reconstruct_path(b_state)]
-            self.f_algo._extend(f_state)
             self.b_algo._extend(b_state)
+            b_times += 1
         return []
 
-    def _init_problem(self, problem:BiSearchProblem) -> None:
+    def _init_problem(self, problem: BiSearchProblem) -> None:
+        """
+        Initialize the forward and backward search problems.
+
+        Args:
+            problem (BiSearchProblem): The bidirectional search problem.
+
+        """
         f_problem = copy(problem)
         b_problem = copy(problem)
         f_problem.initial_state = problem.initial_state
@@ -63,6 +110,16 @@ class BiDirectional(Search):
         self.b_problem = b_problem
     
     def _reconstruct_path(self, inter_state: State) -> List[Action]:
+        """
+        Reconstruct the path from the initial state to the goal state.
+
+        Args:
+            inter_state (State): The intermediate state where the forward and backward paths meet.
+
+        Returns:
+            List[Action]: The path from the initial state to the goal state.
+
+        """
         f_solution = []
         f_state = inter_state
         while self.f_algo.predecessors[f_state][0] is not None:
@@ -79,7 +136,3 @@ class BiDirectional(Search):
             b_state = self.b_algo.predecessors[b_state][0]
         
         return f_solution + b_solution
-    
-class BiAStar(BiDirectional):
-    def __init__(self, problem:BiSearchProblem) -> None:
-        super().__init__(problem, AStar)
