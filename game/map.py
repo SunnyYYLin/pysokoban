@@ -75,7 +75,6 @@ class Map:
         is_blocked(self, x: int, y: int) -> bool: Checks if the tile at the specified position is blocked.
         is_player(self, x: int, y: int) -> bool: Checks if the tile at the specified position is the player.
         is_all_boxes_in_place(self) -> bool: Checks if all boxes are in their designated places.
-        set_to_goal(self) -> None: Sets all boxes to their designated places.
         p_move(self, dx: int, dy: int) -> "Map": Moves the player in a given direction.
         count_deadlock(self) -> int: Counts the number of boxes in deadlock.
     """
@@ -286,30 +285,6 @@ class Map:
             if Tile.BOX in row:
                 return False
         return True
-    
-    def set_to_goal(self) -> None:
-        """
-        Sets all boxes to their designated places.
-
-        Returns:
-            None
-        """
-        self.tiles[self.tiles == Tile.BOX] = Tile.SPACE
-        self.tiles[self.tiles == Tile.GOAL] = Tile.GOALBOX
-        player_x, player_y = random.choice(np.argwhere(self.tiles == Tile.SPACE))
-
-    def __copy__(self) -> "Map":
-        """
-        Copies the map.
-
-        Returns:
-            Map: The copied map.
-        """
-        new_map = Map()
-        new_map.tiles = np.copy(self.tiles)
-        new_map.scale = self.scale
-        new_map.player_x, new_map.player_y = self.player_x, self.player_y
-        return new_map
 
     def p_move(self, dx: int, dy: int) -> "Map":
         """
@@ -450,7 +425,7 @@ class Map:
         distances = np.abs(pos1[:, np.newaxis, :] - pos2[np.newaxis, :, :])
         return distances.sum(axis=2)
     
-    def set_to_goal(self, num: int = 10) -> List["Map"]:
+    def possible_goals(self, num: int = 10) -> List["Map"]:
         """
         Sets all boxes to their designated places.
 

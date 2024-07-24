@@ -1,6 +1,7 @@
 from enum import Enum, auto
 from typing import TypeAlias, List
 from functools import lru_cache
+from copy import copy
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from sealgo.problem import HeuristicSearchProblem, Action
@@ -51,6 +52,16 @@ class SokobanProblem(HeuristicSearchProblem):
         """
         self.level = init_state
         
+    def __copy__(self) -> "SokobanProblem":
+        """
+        Returns a copy of the SokobanProblem object.
+
+        Returns:
+        - A copy of the SokobanProblem object.
+
+        """
+        return SokobanProblem(copy(self.level))
+        
     def initial_state(self) -> State:
         """
         Returns the initial state of the problem.
@@ -59,7 +70,7 @@ class SokobanProblem(HeuristicSearchProblem):
         - The initial state of the problem.
 
         """
-        return self.level.__copy__()
+        return copy(self.level)
     
     def actions(self, map: State) -> List[Action]:
         """
@@ -96,7 +107,7 @@ class SokobanProblem(HeuristicSearchProblem):
         - The resulting state after taking the action.
 
         """
-        new_map = map.__copy__()
+        new_map = copy(map)
         del map
         if action == Action.STAY:
             return new_map

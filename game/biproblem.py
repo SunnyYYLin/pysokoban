@@ -11,6 +11,9 @@ class BiSokobanProblem(SokobanProblem, BiSearchProblem):
     def __init__(self, init_state: Map) -> None:
         super().__init__(init_state)
         self.init_boxes = init_state.locate_boxes()
+        
+    def __copy__(self) -> "BiSokobanProblem":
+        return BiSokobanProblem(self.level)
     
     def goal_states(self, num: int = 10) -> List[Map]:
         """
@@ -20,7 +23,7 @@ class BiSokobanProblem(SokobanProblem, BiSearchProblem):
         - The list of goal states of the problem.
 
         """
-        return self.level.set_to_goal(num)
+        return self.level.possible_goals(num)
     
     def actions_to(self, map: Map) -> List[SokobanAction]:
         """
