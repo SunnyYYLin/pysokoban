@@ -30,6 +30,12 @@
     pip install pygame scipy numpy
     ```
 
+    如果还想进行结果数据处理和分析等操作还需要运行：
+
+    ```sh
+    pip install pandas tabulate matplotlib
+    ```
+
 3. **运行游戏**
 
     ```sh
@@ -96,9 +102,15 @@
 
 该目录包含游戏资源文件，文件夹的名字可作为`--icon-style`的参数。
 
-### scrawler/scrawler.py
+### utils
+
+#### utils/scrawler.py
 
 这个脚本从指定的URL抓取推箱子关卡并保存为文本文件。它将HTML内容中的图片转换为游戏关卡中使用的字符。
+
+#### utils/data_analysis.py
+
+这里是结果分析的时候用到的一些函数。
 
 ### levels
 

@@ -127,8 +127,10 @@ class Game:
                     "b_factor": b_factor,
                     "length": lengths[0],
                 }
+        if not os.path.exists("results"):
+            os.makedirs("results")
         with open(datetime.now().strftime(os.path.join("results","results.json")), "w") as f:
-            json.dump(results, f)
+            json.dump(results, f, indent=4)
 
     def _handle_event(self):
         """

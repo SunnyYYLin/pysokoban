@@ -1,4 +1,4 @@
-# 基于A\*的推箱子求解与推箱子关卡生成
+# 基于双向A\*的推箱子求解与推箱子关卡生成
 
 ## 问题分析
 
@@ -21,7 +21,7 @@
 1. 一致性：启发式函数满足三角不等式，即对于任意状态$n$和其邻接状态$n'$，$h(n) \leq c(n, n') + h(n')$，其中$h(n)$为启发式函数值，$c(n, n')$为从$n$到$n'$的实际代价。
 2. 可接受性：启发式函数永远不会高估从当前状态到目标状态的代价，即$h(n) \leq\hat{h}(n)$，其中$\hat{h}(n)$为从$n$到目标状态的实际最小代价。
 
-为了避免在死锁的状态下持续探索下去，我们首先在启发式函数中加入一个十分大的死锁惩罚项。有一种方法可以判断出大部分的死锁。多次遍历每个箱子，如果这个箱子可以被推动，就让他消失；继续遍历，如果某一轮还有箱子，但遍历一次并未消去任何箱子，那么可以知道后续的遍历也不能消去这些箱子，即局面出现了死锁。
+为了避免在死锁的状态下持续探索下去，我们首先在启发式函数中加入一个十分大的死锁惩罚项。有一种方法可以判断出大部分的死锁。多次遍历每个箱子，如果这个箱子可以被推动，就让他消失；继续遍历，如果某一轮还有箱子，但遍历一次并未消去任何箱子，那么可以知道后续的遍历也不能消去这些箱子，即局面出现了死锁。然而，另一种方式是从反方向解决问题，这天然地可以避免死锁的问题。
 
 其次，在推箱子问题中，箱子需要被推到特定的目标位置上。为了更好地估计从当前状态到目标状态的代价，我们可以利用最小最优匹配来计算启发式函数。最小最优匹配其实就是找到如何将箱子分配给各个目标，使得箱子到目标的曼哈顿距离的总和最小。在求出耗费矩阵后，这个算法可以由 `scipy.optimize.linear_sum_assignment`实现。
 
@@ -64,7 +64,7 @@ $$
 
 经过调查，关卡文件的储存大都由字符表示地块类型，储存在plaintext文件中。主要有两套映射方式，一套是用 `#,$,@,.`等符号，另一套是用 `W,B,P,G`等字母，为了后续利用数据进行训练的便捷，我们储存了两套符号符号系统的转化字典和函数。
 
-在设计要求提供的[推箱子网站](https://sokoban.cn/utility/levelset.php?set=box_it)上，储存着许多关卡，我们编写了一个脚本，根据图像排列的格式，转化为txt文件储存在 `levels/`中。
+在设计要求提供的[推箱子网站](https://sokoban.cn/utility/levelset.php?set=box_it)上，储存着许多关卡，我们编写了一个脚本，根据网站上图像排列的格式，转化为txt文件储存在 `levels/`中。
 
 ## 数据结构设计与实现
 
@@ -89,13 +89,21 @@ $$
 
 `SokobanProblem`在 `game/problem.py`实现，由储存关卡的文件路径初始化的属性 `level`储存了关卡的初始局面。枚举类型 `SokobanAction`定义了上下左右四个动作。问题规则形式化之后写作以下方法：
 
-1. `initial_state`：关卡的初始局面。
+1. `initial_state()`：关卡的初始局面。
 2. `actions(map)`：在某个状态下的所有可能动作。
-3. `result(state, action)`：在某个状态下实施某个动作会导致的结果状态。
-4. `is_goal(state)`：判断某个状态是否为目标状态。
+3. `result(map, action)`：在某个状态下实施某个动作会导致的结果状态。
+4. `is_goal(map)`：判断某个状态是否为目标状态。
 5. `step_cost(map, action)`：由于每一步的耗费都是相等的，所以统一返回1.
 
 此外，问题某个局面的启发值有 `heuristic(map)`方法输出。
+
+`BiSokobanProblem`在`game/biproblem.py`实现，继承于`SokobanProblem`，多了一些满足双向搜索的方法：
+
+1. `goal_states(num)`：返回长度至多为`num`的可能目标状态的列表。
+2. `actions_to(map)`：可能到达某个状态的动作。
+3. `reason(map, action)`：如果通过某个动作到达某个状态，返回其先前状态。
+
+`re_heuristic(map)`作为反向搜索的启发式函数，除了箱子到初始状态的最小最优匹配，还加入的玩家到初始玩家位置的曼哈顿距离。
 
 ### 搜索算法
 
@@ -105,10 +113,7 @@ $$
 class AStar(BestFirstSearch):
     def __init__(self, problem:HeuristicSearchProblem, weight:float|int=1):
         super().__init__(problem)
-        def eval_f(state: State) -> int|float:
-            return self.g_costs[state] + \
-                weight * self.problem.heuristic(state)
-        self.eval_f = eval_f
+        self.eval_f = lambda s: self.g_costs[s] + weight * self.problem.heuristic(s)
 ```
 
 `AStar`继承自抽象父类 `BestFirstSearch`，另外还包含一个权重参数，其对每个状态节点的评价函数 `eval_f`为：
@@ -124,31 +129,64 @@ class BestFirstSearch(Search):
     def __init__(self, problem:SearchProblem) -> None:
         self.problem = problem
         self.frontier = PriorityQueue()
-        self.g_costs = {self.problem.initial_state(): 0} # cost so far
-        self.predecessors = {self.problem.initial_state(): (None, Action.STAY)}
-        self.frontier.put((-1, problem.initial_state()))
-        def eval_f(state: State) -> int|float:
-            return 1
-        self.eval_f = eval_f
+        init = self.problem.initial_state()
+        if isinstance(init, list):
+            self.g_costs = {} # cost so far
+            self.predecessors = {}
+            for state in init:
+                self.g_costs[state] = 0
+                self.predecessors[state] = (None, Action.STAY)
+                self.frontier.put((-1, state))
+        else:
+            self.g_costs = {init: 0} # cost so far
+            self.predecessors = {init: (None, Action.STAY)}
+            self.frontier.put((-1, init))
+        self.eval_f: Callable = lambda s: 0
         # self.eval_f must be defined in the subclass
-  
+        
     def search(self) -> List[List[Action]]:
         while not self.frontier.empty():
             state = self.frontier.get()[1]
             if self.problem.is_goal(state):
                 return [self._reconstruct_path(state)]
-            for action in self.problem.actions(state):
-                next_state = self.problem.result(state, action)
-                g_cost = self.g_costs[state] + self.problem.action_cost(state, action)
-                if next_state not in self.g_costs or g_cost < self.g_costs[next_state]:
-                    self.predecessors[next_state] = (state, action)
-                    self.g_costs[next_state] = g_cost
-                    eval = self.eval_f(next_state)
-                    self.frontier.put((eval, next_state))
+            self._extend(state)
         return []
 ```
 
 `BestFirstSearch`用优先队列储存其探索的前沿，优先队列中状态的优先级即为 `eval_f(state)`，每次都取出优先级最高的节点探索，并将可拓展的节点加入优先队列。此外，`g_costs`储存了到达每个节点的最小路径代价。`predecessors`储存了每个节点的父节点，在搜索到目标节点时，就可以通过 `_reconstruct_path(state)`重构到达目标节点的路径。
+
+另外，在`sealgo/bidirectional.py`中，我们实现了双向搜索算法`BiDirectional`：
+```python
+class BiDirectional(Search):
+    def __init__(self, problem: BiSearchProblem, f_algo: Type[BestFirstSearch], b_algo: Type[BestFirstSearch]|None = None, b_weight: int = 1, *args, **kwargs) -> None:
+        self._init_problem(problem)
+        if b_algo is None:
+            b_algo = f_algo
+        if args or kwargs:
+            self.f_algo = f_algo(self.f_problem, *args, **kwargs)
+            self.b_algo = b_algo(self.b_problem, *args, **kwargs)
+        else:
+            self.f_algo = f_algo(self.f_problem)
+            self.b_algo = b_algo(self.b_problem)
+        self.b_weight = b_weight
+        
+    def search(self) -> List[List[Action]]:
+        b_times = 0
+        while not self.f_algo.frontier.empty() and not self.b_algo.frontier.empty():
+            if b_times >= self.b_weight:
+                b_times = 0
+                # forward search
+                f_state = self.f_algo.frontier.get()[1]
+                self.f_algo._extend(f_state)
+            # backward search
+            b_state = self.b_algo.frontier.get()[1]
+            if b_state in self.f_algo.predecessors:
+                return [self._reconstruct_path(b_state)]
+            self.b_algo._extend(b_state)
+            b_times += 1
+        return []
+```
+他可以接受任意搜索算法分别作为两端探索的算法，在这里我们在两端都使用A\*算法。`b_weight`参数指定当进行多少轮反向探索之后，进行一次前向探索，这在不同问题中的最佳值不同，会影响搜索效率。当两端的已探索区域相连时，返回初始状态到目标状态的路径。
 
 ### 显示 `Display`
 
@@ -177,7 +215,7 @@ class BestFirstSearch(Search):
 1. **搜索空间大小**：即状态空间的大小，设为$N$。
 2. **启发式函数的质量**：启发式函数越准确，搜索空间越小，时间复杂度越低。
 
-在最坏情况下，A\*算法的时间复杂度为$O(b^d)$，其中$b$为每个状态可能的后继状态数（分支因子），$d$为从初始状态到目标状态的最短路径长度。在推箱子问题中，分支因子小于4，因为每个箱子最多可以朝4个方向移动。所以其最坏时间复杂度为$O(b^4)$。
+在最坏情况下，A\*算法相当于广度优先搜索，需要拓展深度$d$的$b$叉树上的每个节点，时间复杂度为$O(b^d)$，其中$b$为每个状态可能的后继状态数（分支因子），$d$为从初始状态到目标状态的最短路径长度。在推箱子问题中，分支因子小于4，因为每个箱子最多可以朝4个方向移动。所以其最坏时间复杂度为$O(b^4)$。
 
 A\*算法的最坏空间复杂度与时间复杂度相同，也是$O(b^4)$，因为A\*算法需要在 `frontier`中储存探索前沿的节点，同时在 `f_costs`与 `predecessors`中储存已经探索过的节点。
 
@@ -189,79 +227,206 @@ $$
 \hat{b}=\log_dn
 $$
 
-得到，其中$d$为路径长度，$n$为探索的节点数量。经过实验，如此设计启发式函数，分支因子大多位于2~3。当个别关卡超过3时，搜索可能就需要超过一分钟甚至一小时！
+得到，其中$d$为路径长度，$n$为探索的节点数量。好的启发式函数可以减小平均分支因子，从而使得搜索时间得到指数级提升。
+
+### 双向搜索算法
+
+双向搜索算法从两端同时开始搜索，时间复杂度为$O(b^{d/2})$，其中$b$为每个状态可能的后继状态数（分支因子），$d$为从初始状态到目标状态的最短路径长度。与单向A\*算法相比，双向搜索算法通过减小搜索深度，可以显著降低时间复杂度。
+
+双向搜索算法的最坏空间复杂度也是$O(b^{d/2})$，因为需要同时存储从起始状态和目标状态进行的搜索前沿节点。
+
+通过引入双向搜索算法，可以显著降低时间复杂度和空间复杂度，尤其在大规模搜索问题中，双向搜索算法的优势更加明显。
 
 ## 结果分析
 
 ### 推箱子求解
 
-利用A\*算法，使用最优匹配距离、人箱最近距离和，在20个示例关卡上测试，得到结果如下：
+确定了启发式函数之后，前向A\*搜索算法的超参数为预估权重`weight`，双向A\*搜索的超参数为A\*中的预估权重`weight`与后向-前向比例`b_weight`。
+
+利用正向A\*算法，使用最小最优匹配、人箱最近距离和死锁惩罚，用不同的预估权重在20个示例关卡上测试。经过实验，发现`weight`为3时A\*表现较好，得到结果如下：
 
 ```log
 2024-07-22 12:11:26,804 - INFO - Game initialized at 2024-07-22 12:11:26.804829
-2024-07-22 12:11:27,065 - INFO - The b-factor is 2.1955863578374766
 2024-07-22 12:11:27,065 - INFO - Level 1: Solution found in 0.26 seconds.
+2024-07-22 12:11:27,065 - INFO - The b-factor is 2.1955863578374766
 2024-07-22 12:11:27,065 - INFO - Solution length: [25]
-2024-07-22 12:11:28,642 - INFO - The b-factor is 2.622756694159562
 2024-07-22 12:11:28,642 - INFO - Level 2: Solution found in 1.57 seconds.
+2024-07-22 12:11:28,642 - INFO - The b-factor is 2.622756694159562
 2024-07-22 12:11:28,642 - INFO - Solution length: [27]
-2024-07-22 12:11:28,949 - INFO - The b-factor is 2.1655796487703918
 2024-07-22 12:11:28,950 - INFO - Level 3: Solution found in 0.31 seconds.
+2024-07-22 12:11:28,949 - INFO - The b-factor is 2.1655796487703918
 2024-07-22 12:11:28,950 - INFO - Solution length: [35]
-2024-07-22 12:11:29,194 - INFO - The b-factor is 1.6870676516829783
 2024-07-22 12:11:29,194 - INFO - Level 4: Solution found in 0.24 seconds.
+2024-07-22 12:11:29,194 - INFO - The b-factor is 1.6870676516829783
 2024-07-22 12:11:29,194 - INFO - Solution length: [71]
-2024-07-22 12:11:30,372 - INFO - The b-factor is 2.277612976131103
 2024-07-22 12:11:30,372 - INFO - Level 5: Solution found in 1.17 seconds.
+2024-07-22 12:11:30,372 - INFO - The b-factor is 2.277612976131103
 2024-07-22 12:11:30,373 - INFO - Solution length: [41]
-2024-07-22 12:11:33,062 - INFO - The b-factor is 2.811150845173945
 2024-07-22 12:11:33,062 - INFO - Level 6: Solution found in 2.69 seconds.
+2024-07-22 12:11:33,062 - INFO - The b-factor is 2.811150845173945
 2024-07-22 12:11:33,062 - INFO - Solution length: [30]
-2024-07-22 12:11:33,286 - INFO - The b-factor is 1.836101573780415
 2024-07-22 12:11:33,286 - INFO - Level 7: Solution found in 0.23 seconds.
+2024-07-22 12:11:33,286 - INFO - The b-factor is 1.836101573780415
 2024-07-22 12:11:33,286 - INFO - Solution length: [52]
-2024-07-22 12:11:44,935 - INFO - The b-factor is 2.4472097233439887
 2024-07-22 12:11:44,935 - INFO - Level 8: Solution found in 11.65 seconds.
+2024-07-22 12:11:44,935 - INFO - The b-factor is 2.4472097233439887
 2024-07-22 12:11:44,935 - INFO - Solution length: [71]
-2024-07-22 12:11:47,716 - INFO - The b-factor is 2.175626877770764
 2024-07-22 12:11:47,716 - INFO - Level 9: Solution found in 2.78 seconds.
+2024-07-22 12:11:47,716 - INFO - The b-factor is 2.175626877770764
 2024-07-22 12:11:47,716 - INFO - Solution length: [79]
+2024-07-22 12:12:02,265 - INFO - Level 10: Solution found in 14.55 
+seconds.
 2024-07-22 12:12:02,265 - INFO - The b-factor is 2.5029435109458373
-2024-07-22 12:12:02,265 - INFO - Level 10: Solution found in 14.55 seconds.
 2024-07-22 12:12:02,265 - INFO - Solution length: [76]
-2024-07-22 12:12:02,755 - INFO - The b-factor is 1.7439535788979916
 2024-07-22 12:12:02,756 - INFO - Level 11: Solution found in 0.49 seconds.
+2024-07-22 12:12:02,755 - INFO - The b-factor is 1.7439535788979916
 2024-07-22 12:12:02,756 - INFO - Solution length: [78]
-2024-07-22 12:12:04,668 - INFO - The b-factor is 2.52037307175807
 2024-07-22 12:12:04,668 - INFO - Level 12: Solution found in 1.91 seconds.
+2024-07-22 12:12:04,668 - INFO - The b-factor is 2.52037307175807
 2024-07-22 12:12:04,668 - INFO - Solution length: [37]
-2024-07-22 12:12:42,908 - INFO - The b-factor is 2.96284940146013
 2024-07-22 12:12:42,909 - INFO - Level 13: Solution found in 38.24 seconds.
+2024-07-22 12:12:42,908 - INFO - The b-factor is 2.96284940146013
 2024-07-22 12:12:42,909 - INFO - Solution length: [56]
-2024-07-22 12:12:47,177 - INFO - The b-factor is 1.9528706242125256
 2024-07-22 12:12:47,177 - INFO - Level 14: Solution found in 4.27 seconds.
+2024-07-22 12:12:47,177 - INFO - The b-factor is 1.9528706242125256
 2024-07-22 12:12:47,177 - INFO - Solution length: [144]
-2024-07-22 12:12:55,734 - INFO - The b-factor is 2.2320129447429133
 2024-07-22 12:12:55,734 - INFO - Level 15: Solution found in 8.56 seconds.
+2024-07-22 12:12:55,734 - INFO - The b-factor is 2.2320129447429133
 2024-07-22 12:12:55,735 - INFO - Solution length: [95]
-2024-07-22 12:21:00,656 - INFO - The b-factor is 3.4026483702748584
 2024-07-22 12:21:00,657 - INFO - Level 16: Solution found in 484.92 seconds.
+2024-07-22 12:21:00,656 - INFO - The b-factor is 3.4026483702748584
 2024-07-22 12:21:00,657 - INFO - Solution length: [60]
-2024-07-22 12:21:51,155 - INFO - The b-factor is 2.8607833766234765
 2024-07-22 12:21:51,155 - INFO - Level 17: Solution found in 50.50 seconds.
+2024-07-22 12:21:51,155 - INFO - The b-factor is 2.8607833766234765
 2024-07-22 12:21:51,155 - INFO - Solution length: [67]
-2024-07-22 12:21:53,963 - INFO - The b-factor is 2.2596906302970865
 2024-07-22 12:21:53,963 - INFO - Level 18: Solution found in 2.80 seconds.
+2024-07-22 12:21:53,963 - INFO - The b-factor is 2.2596906302970865
 2024-07-22 12:21:53,963 - INFO - Solution length: [63]
-2024-07-22 12:35:24,375 - INFO - The b-factor is 2.84201976504555
 2024-07-22 12:35:24,376 - INFO - Level 19: Solution found in 810.42 seconds.
+2024-07-22 12:35:24,375 - INFO - The b-factor is 2.84201976504555
 2024-07-22 12:35:24,376 - INFO - Solution length: [164]
-2024-07-22 12:35:27,046 - INFO - The b-factor is 2.3357095887171684
 2024-07-22 12:35:27,046 - INFO - Level 20: Solution found in 2.67 seconds.
+2024-07-22 12:35:27,046 - INFO - The b-factor is 2.3357095887171684
 2024-07-22 12:35:27,046 - INFO - Solution length: [55]
 ```
 
-除了16和19关，该算法都能在较快的时间内找到答案。其中19关的时间尤其长，而16关的分支因子达到了3.4。可能是启发式函数设计不恰当，导致探索了很多没有发现的死锁；也可能是阻挡过多，导致最优匹配给出的距离过于低估了箱子需要前往目标的路程，难以发现正确的路径。
+经过实验，如此设计启发式函数，分支因子大多位于2~3。当个别关卡超过3时，搜索可能就需要超过一分钟甚至一刻钟！除了16和19关，该算法都能在较快的时间内找到答案。其中19关的时间尤其长，而16关的分支因子达到了3.4。可能是启发式函数设计不恰当，导致探索了很多没有发现的死锁；也可能是阻挡过多，导致最优匹配给出的距离过于低估了箱子需要前往目标的路程，难以发现正确的路径。
+
+利用双向A\*算法，将`weight`设置为3，使用不同的`b_weight`（当为`np.inf`时退化为反向A\*搜索），在20个示例关卡上测试，得到结果如下：
+
+| weight   |   level |   elapsed_time |   b_factor |   length |
+|:---------|--------:|---------------:|-----------:|---------:|
+| 1        |       0 |           0    |       1.89 |        3 |
+| 1        |       1 |           0.02 |       1.95 |       18 |
+| 1        |       2 |           0.02 |       1.72 |       23 |
+| 1        |       3 |           0.18 |       2.12 |       36 |
+| 1        |       4 |           0.11 |       1.64 |       68 |
+| 1        |       5 |           0.73 |       2.45 |       36 |
+| 1        |       6 |           0.14 |       2.15 |       29 |
+| 1        |       7 |           0.12 |       1.96 |       39 |
+| 1        |       8 |           0.43 |       1.95 |       68 |
+| 1        |       9 |           0.29 |       1.83 |       78 |
+| 1        |      10 |           1.4  |       2.23 |       67 |
+| 1        |      11 |           0.82 |       2.42 |       41 |
+| 1        |      12 |           0.19 |       2.13 |       34 |
+| 1        |      13 |           0.23 |       1.91 |       55 |
+| 1        |      14 |           1.88 |       1.94 |      141 |
+| 1        |      15 |           3.07 |       2.35 |       72 |
+| 1        |      16 |          50.08 |       3.52 |       37 |
+| 1        |      17 |           6.83 |       2.76 |       48 |
+| 1        |      18 |           1.76 |       2.33 |       60 |
+| 1        |      19 |          18.77 |       2.86 |       60 |
+| 1        |      20 |           0.78 |       2.31 |       46 |
+| 10       |       0 |           0    |       1.89 |        3 |
+| 10       |       1 |           0.01 |       1.8  |       18 |
+| 10       |       2 |           0.01 |       1.77 |       23 |
+| 10       |       3 |           0.12 |       2.18 |       28 |
+| 10       |       4 |           0.05 |       1.49 |       68 |
+| 10       |       5 |           0.58 |       2.45 |       38 |
+| 10       |       6 |           0.06 |       1.95 |       29 |
+| 10       |       7 |           0.06 |       1.92 |       33 |
+| 10       |       8 |           0.26 |       1.87 |       64 |
+| 10       |       9 |           0.52 |       2    |       72 |
+| 10       |      10 |           0.65 |       2.11 |       65 |
+| 10       |      11 |           0.31 |       2.22 |       41 |
+| 10       |      12 |           0.08 |       1.96 |       34 |
+| 10       |      13 |           0.09 |       1.73 |       55 |
+| 10       |      14 |           1.44 |       1.93 |      141 |
+| 10       |      15 |           2.3  |       2.22 |       72 |
+| 10       |      16 |          21.05 |       3.38 |       37 |
+| 10       |      17 |           1.87 |       2.57 |       48 |
+| 10       |      18 |           0.94 |       2.26 |       60 |
+| 10       |      19 |           6.7  |       2.65 |       60 |
+| 10       |      20 |           0.29 |       2.12 |       46 |
+| 100      |       0 |           0    |       1.89 |        3 |
+| 100      |       1 |           0    |       1.77 |       18 |
+| 100      |       2 |           0.02 |       1.76 |       23 |
+| 100      |       3 |           0.09 |       2.14 |       28 |
+| 100      |       4 |           0.04 |       1.46 |       68 |
+| 100      |       5 |           0.58 |       2.59 |       32 |
+| 100      |       6 |           0.16 |       2.29 |       29 |
+| 100      |       7 |           0.06 |       1.88 |       33 |
+| 100      |       8 |           0.21 |       1.85 |       64 |
+| 100      |       9 |           0.71 |       2.18 |       56 |
+| 100      |      10 |           0.72 |       2.11 |       69 |
+| 100      |      11 |           0.24 |       2.18 |       41 |
+| 100      |      12 |           0.09 |       1.99 |       34 |
+| 100      |      13 |           0.06 |       1.7  |       55 |
+| 100      |      14 |           1.26 |       1.91 |      141 |
+| 100      |      15 |           1    |       2.18 |       72 |
+| 100      |      16 |          18.86 |       3.36 |       37 |
+| 100      |      17 |           3.44 |       2.74 |       48 |
+| 100      |      18 |           0.85 |       2.26 |       60 |
+| 100      |      19 |          10.29 |       2.75 |       62 |
+| 100      |      20 |           0.31 |       2.21 |       42 |
+| 1000     |       0 |           0    |       1.89 |        3 |
+| 1000     |       1 |           0.01 |       1.77 |       18 |
+| 1000     |       2 |           0.01 |       1.76 |       23 |
+| 1000     |       3 |           0.09 |       2.13 |       28 |
+| 1000     |       4 |           0.07 |       1.48 |       68 |
+| 1000     |       5 |           0.59 |       2.59 |       32 |
+| 1000     |       6 |           0.16 |       2.29 |       29 |
+| 1000     |       7 |           0.05 |       1.88 |       33 |
+| 1000     |       8 |           0.21 |       1.85 |       64 |
+| 1000     |       9 |           0.71 |       2.17 |       56 |
+| 1000     |      10 |           0.79 |       2.15 |       67 |
+| 1000     |      11 |           0.39 |       2.29 |       41 |
+| 1000     |      12 |           0.1  |       1.98 |       34 |
+| 1000     |      13 |           0.06 |       1.7  |       55 |
+| 1000     |      14 |           1.26 |       1.91 |      141 |
+| 1000     |      15 |           1.07 |       2.19 |       72 |
+| 1000     |      16 |          18.74 |       3.36 |       37 |
+| 1000     |      17 |           5.74 |       2.73 |       48 |
+| 1000     |      18 |           0.88 |       2.25 |       60 |
+| 1000     |      19 |           8.46 |       2.75 |       62 |
+| 1000     |      20 |           0.32 |       2.21 |       42 |
+| Infinity |       0 |           0    |       1.89 |        3 |
+| Infinity |       1 |           0.01 |       1.77 |       18 |
+| Infinity |       2 |           0.01 |       1.76 |       23 |
+| Infinity |       3 |           0.1  |       2.13 |       28 |
+| Infinity |       4 |           0.04 |       1.48 |       68 |
+| Infinity |       5 |           0.62 |       2.59 |       32 |
+| Infinity |       6 |           0.17 |       2.29 |       29 |
+| Infinity |       7 |           0.05 |       1.88 |       33 |
+| Infinity |       8 |           0.21 |       1.85 |       64 |
+| Infinity |       9 |           0.74 |       2.17 |       56 |
+| Infinity |      10 |           3.24 |       2.15 |       71 |
+| Infinity |      11 |           0.4  |       2.29 |       41 |
+| Infinity |      12 |           0.09 |       1.98 |       34 |
+| Infinity |      13 |           0.07 |       1.7  |       55 |
+| Infinity |      14 |           1.3  |       1.91 |      141 |
+| Infinity |      15 |           1.09 |       2.19 |       72 |
+| Infinity |      16 |          18.84 |       3.36 |       37 |
+| Infinity |      17 |           3.48 |       2.73 |       48 |
+| Infinity |      18 |           0.88 |       2.25 |       60 |
+| Infinity |      19 |          11.07 |       2.75 |       62 |
+| Infinity |      20 |           0.31 |       2.21 |       42 |
+画出搜索用时和分支因子随`b_weight`变化的曲线图如图6：
+
+| ![搜索用时和分支因子随`b_weight`变化](results.png) |
+| :------------------------------------: |
+|       图6 搜索用时和分支因子随`b_weight`变化        |
+可见，虽然相比纯正向搜索有大幅提升，但均衡的正向和反向搜索效果最差，而反向搜索的权重增大到100以上，以及纯反向搜索时，对不同关卡的表现各有差异。这可能是因为正向搜索可以只有一个初始状态，而反向搜索有多个，这在箱子较多的场景可能会有性能的下降；但是反向搜索不会陷入死锁，这在容易造成死锁的场景十分高效。总的来说，在推箱子求解任务中，反向搜索更有效，但正向搜索也起到补充作用。
 
 ### 推箱子生成
 
@@ -269,11 +434,11 @@ $$
 
 | ![第一次生成](generated_map_01.png) |
 | :----------------------------: |
-|            图6 第一次生成            |
+|            图7 第一次生成            |
 | ![第二次生成](generated_map_02.png) |
-|            图7 第二次生成            |
+|            图8 第二次生成            |
 | ![第三次生成](generated_map_03.png) |
-|            图8 第三次生成            |
+|            图9 第三次生成            |
 
 
 可以看到，生成的地图都是可解的，并且有一定的多样性和难度。
