@@ -158,14 +158,14 @@ class SokobanProblem(HeuristicSearchProblem):
     
     def _min_perfect_matching(self, boxes: np.ndarray, goals: np.ndarray) -> int:
         """
-        Calculates the minimum perfect matching between the boxes and the goals.
+        Calculates the minimum perfect matching between the given boxes and goals.
 
         Args:
-            boxes (np.ndarray): The boxes in the state.
-            goals (np.ndarray): The goals in the state.
+            boxes (np.ndarray): Array of box positions.
+            goals (np.ndarray): Array of goal positions.
 
         Returns:
-            int: The heuristic value.
+            int: The sum of the costs of the minimum perfect matching.
         """
         cost_matrix = Map.cost_matrix(boxes, goals)
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
@@ -173,12 +173,13 @@ class SokobanProblem(HeuristicSearchProblem):
     
     def _deadlock_punishment(self, map: Map, boxes: np.ndarray) -> int:
         """
-        Calculates the punishment for deadlocks.
+        Calculates the punishment for being in a deadlock state.
 
         Args:
-            state (Map): The current state of the Sokoban problem.
+            map (Map): The game map.
+            boxes (np.ndarray): The current positions of the boxes.
 
         Returns:
-            int: The heuristic value.
+            int: The punishment value. Returns 50 if the current state is a deadlock, otherwise returns 0.
         """
         return 50 if map.count_deadlock(boxes) else 0

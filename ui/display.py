@@ -18,6 +18,33 @@ class State(Enum):
     SOLVING = auto()
     
 class Display:
+    """
+    The Display class handles the graphical display of the Sokoban game.
+
+    Args:
+        icon_paths (str): The paths to the icons used for different tiles in the game.
+        scale (Point2D, optional): The scale of the display window. Defaults to (1600, 1200).
+
+    Attributes:
+        scale (Point2D): The scale of the display window.
+        screen (pygame.Surface): The display surface.
+        state (State): The current state of the game.
+        icon_paths (str): The paths to the icons used for different tiles in the game.
+        images (dict): A dictionary mapping tiles to their corresponding images.
+        tile_size (int): The size of each tile in pixels.
+
+    Methods:
+        _load_images: Load the images for the tiles.
+        render: Render the game map on the display.
+        _show: Show text on the display.
+        _victory_menu: Show the victory menu.
+        _start_menu: Show the start menu.
+        _main_menu: Show the main menu.
+        _generating: Show the generating message.
+        _ai_solving: Show the AI solving message.
+        run: Run the display based on the current game state.
+    """
+
     def __init__(self, icon_paths: str, scale: Point2D = (1600, 1200)):
         self.scale = scale
         self.screen = pygame.display.set_mode(self.scale)
@@ -26,6 +53,12 @@ class Display:
         pygame.display.set_caption("Sokoban")
 
     def _load_images(self, icon_paths: str) -> None:
+        """
+        Load the images for the tiles.
+
+        Args:
+            icon_paths (str): The paths to the icons used for different tiles in the game.
+        """
         self.icon_paths = icon_paths
         self.images = {}
         for tile, path in self.icon_paths.items():
@@ -36,6 +69,15 @@ class Display:
                 self.images[tile] = None
 
     def render(self, map) -> Tuple[dict, dict]:
+        """
+        Render the game map on the display.
+
+        Args:
+            map: The game map.
+
+        Returns:
+            Tuple[dict, dict]: Empty dictionaries.
+        """
         self.tile_size = min(self.scale[0] // map.scale[1], self.scale[1] // map.scale[0])
         self.screen.fill((0, 0, 0))
         for y, row in enumerate(map.tiles):
@@ -46,7 +88,7 @@ class Display:
                     self.screen.blit(scaled_image, (x * self.tile_size, y * self.tile_size))
         pygame.display.flip()
         return {}, {}
-    
+
     def _show(self, text_pos: Dict[pygame.Surface, Point2D]) -> Dict[pygame.Surface, pygame.Rect]:
         text_rect = {text:text.get_rect(
             center=(self.scale[0] * text_pos[text][0], self.scale[1] * text_pos[text][1]))
@@ -134,7 +176,22 @@ class Display:
         return text_rect, {}
                     
     def run(self, map: map, lvl_num: int) \
-        -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
+            -> Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
+        """
+        Run the display based on the current state.
+
+        Args:
+            map (map): The game map.
+            lvl_num (int): The level number.
+
+        Returns:
+            Tuple[Dict[pygame.Surface, pygame.Rect], Dict[pygame.Surface, Event]]:
+                A tuple containing dictionaries of surfaces and events.
+        
+        Raises:
+            ValueError: If the state is invalid.
+        """
+        
         match self.state:
             case State.GAMING:
                 return self.render(map)

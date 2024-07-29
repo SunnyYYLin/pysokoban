@@ -21,13 +21,33 @@ _key_event = {
 }
 
 class InputHandler:
+    """
+    Handles user inputs and maps them to corresponding actions or events.
+    """
     def __init__(self, key_actions: dict, key_events: dict = _key_event):
+        """
+        Initializes an InputHandler object.
+
+        Args:
+            key_actions (dict): A dictionary mapping key codes to corresponding actions.
+            key_events (dict, optional): A dictionary mapping key codes to corresponding events. Defaults to _key_event.
+        """
         self.key_actions = key_actions
         self.key_events = key_events
         pass
 
     def handle_inputs(self, text_rect: Dict[pygame.Surface, pygame.Rect],
                       text_event: Dict[pygame.Surface, Event]):
+        """
+        Handles user inputs.
+
+        Args:
+            text_rect (Dict[pygame.Surface, pygame.Rect]): A dictionary mapping text surfaces to their corresponding rectangles.
+            text_event (Dict[pygame.Surface, Event]): A dictionary mapping text surfaces to their corresponding events.
+
+        Returns:
+            Event: The event corresponding to the user input.
+        """
         for event in pygame.event.get():
             # if click on the close button, quit the game
             if event.type == pygame.QUIT:
