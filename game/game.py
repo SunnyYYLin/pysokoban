@@ -233,7 +233,8 @@ class Game:
         """
         Handles solving events.
         """
-        biproblem = BiSokobanProblem(copy(self.map))
+        current_map = copy(self.map)
+        biproblem = BiSokobanProblem(self.map)
         ai = BiDirectional(biproblem, AStar, b_weight = np.inf, weight = 3)
         solutions = ai.search()
         if len(solutions) == 0:
@@ -242,7 +243,7 @@ class Game:
             self.display.state = State.MAIN_MENU
         else:
             while len(solutions) > 0:
-                self.map = self.problem.initial_state()
+                self.map = copy(current_map)
                 solution = solutions.pop(0)
                 delay = SOLUTION_DISPLAY_TIME // len(solution)
                 logging.info(f"Solution for Level{self.lvl_num}: {solution}")
