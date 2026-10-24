@@ -1,33 +1,52 @@
-import argparse
-import logging
-from datetime import datetime
-import os
-import pygame
-import numpy as np
-from game.game import Game
+"""Main entrypoint for PySokoban: The Chronicle of AI Search Algorithms.
 
-def main():
-    parser = argparse.ArgumentParser(description="Sokoban Game")
-    parser.add_argument("--test", action="store_true", help="Run the game in test mode")
-    parser.add_argument("--level", type=int, default=1, help="Specify the starting level")
-    parser.add_argument("--log-file", type=str, default="sokoban.log", help="Specify the log file")
-    parser.add_argument("--icon-style", type=str, default="images_v1", help="Specify the icon style")
-    args = parser.parse_args()
-    
-    if not os.path.exists('logs'):
-        os.makedirs('logs')
-    log_filename = datetime.now().strftime(os.path.join("logs","sokoban_%Y%m%d_%H%M%S.log"))
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
-                        handlers=[
-                            logging.FileHandler(log_filename),
-                            logging.StreamHandler()
-                        ])
-    pygame.init()
-    game = Game(lvl_num=args.level, icon_style=args.icon_style)
-    if args.test:
-        game.test(b_weights=[1, 10, 100, 1000, np.inf])
-    else:
-        game.run()
+Supports both modern subcommands:
+    pysokoban play
+    pysokoban bench
+    pysokoban solve
+    pysokoban list-algorithms
+
+And legacy options:
+    python main.py --level 1 --icon-style images_v1
+    python main.py --test
+"""
+
+import sys
+from pathlib import Path
+
+# Ensure 'src' is on sys.path if running directly from repository root without pip install
+src_dir = Path(__file__).parent / "src"
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
+
+from pysokoban.cli import main
 
 if __name__ == "__main__":
+    # If called with legacy flags like --level or --test directly without subcommands
+    args = sys.argv[1:]
+    if not args:
+        # Default action: launch play
+        sys.argv = [sys.argv[0], "play"]
+    elif args[0] not in ("play", "bench", "solve", "list-algorithms", "-h", "--help"):
+        if "--test" in args:
+            sys.argv = [sys.argv[0], "bench"]
+        else:
+            # Map legacy args to 'play'
+            lvl = "levels/02_benchmark/tier1_micro_1box.txt"
+            style = "images_v1"
+            if "--level" in args:
+                idx = args.index("--level")
+                if idx + 1 < len(args):
+                    lvl_num = args[idx + 1]
+                    # Check if numeric
+                    if lvl_num.isdigit():
+                        lvl = f"levels/level{lvl_num}.txt"
+                    else:
+                        lvl = lvl_num
+            if "--icon-style" in args:
+                idx = args.index("--icon-style")
+                if idx + 1 < len(args):
+                    style = args[idx + 1]
+            sys.argv = [sys.argv[0], "play", "--level", lvl, "--icon-style", style]
+
     main()
