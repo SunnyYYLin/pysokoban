@@ -84,6 +84,7 @@ class AStar(SearchAlgorithm):
         ]
         # Track best g-cost seen for each state
         best_g: dict[SokobanState, float] = {init_state: 0.0}
+        explored_boxes: Set[Coord] = set(init_state.boxes)
 
         metrics.generated_nodes = 1
         metrics.peak_frontier = 1
@@ -104,13 +105,20 @@ class AStar(SearchAlgorithm):
                 continue
 
             metrics.expanded_nodes += 1
+            explored_boxes.update(curr_state.boxes)
 
             if board.is_goal(curr_state):
                 metrics.duration_sec = time.perf_counter() - start_time
                 actions, states, steps, pushes = self.reconstruct_path(node)
                 metrics.solution_steps = steps
                 metrics.solution_pushes = pushes
-                return SearchResult(solved=True, actions=actions, states=states, metrics=metrics)
+                return SearchResult(
+                    solved=True,
+                    actions=actions,
+                    states=states,
+                    metrics=metrics,
+                    explored_tiles=explored_boxes,
+                )
 
             for action, next_state, is_push in board.get_valid_actions(curr_state):
                 step_cost = 1.0  # Unit cost
@@ -139,7 +147,7 @@ class AStar(SearchAlgorithm):
             metrics.peak_frontier = max(metrics.peak_frontier, len(frontier))
 
         metrics.duration_sec = time.perf_counter() - start_time
-        return SearchResult.failure(metrics)
+        return SearchResult.failure(metrics, explored_tiles=explored_boxes)
 
     def solve_steps(
         self,
@@ -244,7 +252,7 @@ class AStar(SearchAlgorithm):
             metrics.peak_frontier = max(metrics.peak_frontier, len(frontier))
 
         metrics.duration_sec = time.perf_counter() - start_time
-        return SearchResult.failure(metrics)
+        return SearchResult.failure(metrics, explored_tiles=explored_boxes)
 
 
 class GreedyBestFirstSearch(SearchAlgorithm):
@@ -288,6 +296,7 @@ class GreedyBestFirstSearch(SearchAlgorithm):
         root = SearchNode(state=init_state, g=0.0, h=init_h, depth=0)
         frontier: List[tuple[float, int, SearchNode]] = [(root.h, next(counter), root)]
         visited: Set[SokobanState] = {init_state}
+        explored_boxes: Set[Coord] = set(init_state.boxes)
 
         metrics.generated_nodes = 1
         metrics.peak_frontier = 1
@@ -302,13 +311,20 @@ class GreedyBestFirstSearch(SearchAlgorithm):
 
             h_val, _, node = heapq.heappop(frontier)
             metrics.expanded_nodes += 1
+            explored_boxes.update(node.state.boxes)
 
             if board.is_goal(node.state):
                 metrics.duration_sec = time.perf_counter() - start_time
                 actions, states, steps, pushes = self.reconstruct_path(node)
                 metrics.solution_steps = steps
                 metrics.solution_pushes = pushes
-                return SearchResult(solved=True, actions=actions, states=states, metrics=metrics)
+                return SearchResult(
+                    solved=True,
+                    actions=actions,
+                    states=states,
+                    metrics=metrics,
+                    explored_tiles=explored_boxes,
+                )
 
             for action, next_state, is_push in board.get_valid_actions(node.state):
                 if next_state not in visited:
@@ -331,7 +347,7 @@ class GreedyBestFirstSearch(SearchAlgorithm):
             metrics.peak_frontier = max(metrics.peak_frontier, len(frontier))
 
         metrics.duration_sec = time.perf_counter() - start_time
-        return SearchResult.failure(metrics)
+        return SearchResult.failure(metrics, explored_tiles=explored_boxes)
 
 
 class IDAStar(SearchAlgorithm):
@@ -372,11 +388,13 @@ class IDAStar(SearchAlgorithm):
         bound = self.heuristic(board, init_state)
         root = SearchNode(state=init_state, g=0.0, h=bound, depth=0)
         metrics.generated_nodes = 1
+        explored_boxes: Set[Coord] = set(init_state.boxes)
 
         def search_rec(
             node: SearchNode, g: float, current_bound: float, path: set[SokobanState]
         ) -> tuple[float, Optional[SearchNode]]:
             metrics.expanded_nodes += 1
+            explored_boxes.update(node.state.boxes)
             f = g + node.h
             if f > current_bound:
                 return f, None
@@ -431,10 +449,16 @@ class IDAStar(SearchAlgorithm):
                 actions, states, steps, pushes = self.reconstruct_path(goal_node)
                 metrics.solution_steps = steps
                 metrics.solution_pushes = pushes
-                return SearchResult(solved=True, actions=actions, states=states, metrics=metrics)
+                return SearchResult(
+                    solved=True,
+                    actions=actions,
+                    states=states,
+                    metrics=metrics,
+                    explored_tiles=explored_boxes,
+                )
             if math.isinf(t):
                 break
             bound = t
 
         metrics.duration_sec = time.perf_counter() - start_time
-        return SearchResult.failure(metrics)
+        return SearchResult.failure(metrics, explored_tiles=explored_boxes)

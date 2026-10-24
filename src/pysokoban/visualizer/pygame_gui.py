@@ -169,18 +169,21 @@ class SokobanGUI:
             self.is_playing_solution = True
             self.is_paused = False
 
-            # Collect visited box positions across the solution path
-            self.explored_tiles = set()
-            for st in res.states:
-                self.explored_tiles.update(st.boxes)
+            # Set all tiles explored during the search algorithm execution
+            self.explored_tiles = (
+                set(res.explored_tiles)
+                if res.explored_tiles
+                else {b for st in res.states for b in st.boxes}
+            )
 
             m = res.metrics
             self.status_message = (
                 f"✓ Solved by {algo.name} ({algo.historical_year})! "
-                f"Steps: {m.solution_steps}, Exp: {m.expanded_nodes:,}, Time: {m.duration_sec * 1000:.1f}ms. Space=Pause"
+                f"Steps: {m.solution_steps}, Exp: {m.expanded_nodes:,}, Time: {m.duration_sec * 1000:.1f}ms. [Space]=Pause [F2]=Heatmap"
             )
         else:
-            self.status_message = f"✗ {algo.name} could not solve from current state."
+            self.explored_tiles = set(res.explored_tiles)
+            self.status_message = f"✗ {algo.name} failed (Expanded {res.metrics.expanded_nodes:,} nodes). Press [F2] to see explored area."
 
     def _render_hud(self) -> None:
         # Background bar
@@ -214,7 +217,7 @@ class SokobanGUI:
         self.screen.blit(msg_text, (15, 38))
 
         # Line 3: Shortcuts guidance
-        guide = "[Arrows] Move | [Z/U] Undo | [Y] Redo | [S] AI Solve | [1-9] Switch AI | [F2] Heatmap | [Space] Pause"
+        guide = "[Arrows] Move | [Z/U] Undo | [Y] Redo | [S] AI Solve | [1-9] Switch AI | [F2] Heatmap | [Space] Pause | [,] [.] Step"
         guide_text = self.small_font.render(guide, True, (160, 170, 185))
         self.screen.blit(guide_text, (15, 65))
 
@@ -343,6 +346,19 @@ class SokobanGUI:
                     elif event.key == pygame.K_MINUS:
                         self.playback_speed_fps = max(1, self.playback_speed_fps - 2)
                         self.status_message = f"Playback speed: {self.playback_speed_fps} fps"
+                    # Single-frame step forward / backward
+                    elif event.key in (pygame.K_PERIOD, pygame.K_GREATER):
+                        if self.playback_states and self.playback_idx < len(self.playback_states):
+                            self.is_paused = True
+                            self.current_state = self.playback_states[self.playback_idx]
+                            self.playback_idx += 1
+                            self.status_message = f"Step {self.playback_idx}/{len(self.playback_states)} (Paused)"
+                    elif event.key in (pygame.K_COMMA, pygame.K_LESS):
+                        if self.playback_states and self.playback_idx > 1:
+                            self.is_paused = True
+                            self.playback_idx -= 1
+                            self.current_state = self.playback_states[self.playback_idx - 1]
+                            self.status_message = f"Step {self.playback_idx}/{len(self.playback_states)} (Paused)"
 
             self._render_all()
             pygame.display.flip()

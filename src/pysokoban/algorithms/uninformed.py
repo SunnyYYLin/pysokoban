@@ -66,6 +66,7 @@ class BreadthFirstSearch(SearchAlgorithm):
         root = SearchNode(state=init_state, depth=0)
         frontier: deque[SearchNode] = deque([root])
         visited: Set[SokobanState] = {init_state}
+        explored_boxes: Set[Coord] = set(init_state.boxes)
 
         metrics.generated_nodes = 1
         metrics.peak_frontier = 1
@@ -80,6 +81,7 @@ class BreadthFirstSearch(SearchAlgorithm):
 
             node = frontier.popleft()
             metrics.expanded_nodes += 1
+            explored_boxes.update(node.state.boxes)
 
             for action, next_state, is_push in board.get_valid_actions(node.state):
                 if next_state not in visited:
@@ -98,11 +100,13 @@ class BreadthFirstSearch(SearchAlgorithm):
                         actions, states, steps, pushes = self.reconstruct_path(child)
                         metrics.solution_steps = steps
                         metrics.solution_pushes = pushes
+                        explored_boxes.update(next_state.boxes)
                         return SearchResult(
                             solved=True,
                             actions=actions,
                             states=states,
                             metrics=metrics,
+                            explored_tiles=explored_boxes,
                         )
 
                     visited.add(next_state)
@@ -111,7 +115,7 @@ class BreadthFirstSearch(SearchAlgorithm):
             metrics.peak_frontier = max(metrics.peak_frontier, len(frontier))
 
         metrics.duration_sec = time.perf_counter() - start_time
-        return SearchResult.failure(metrics)
+        return SearchResult.failure(metrics, explored_tiles=explored_boxes)
 
     def solve_steps(
         self,

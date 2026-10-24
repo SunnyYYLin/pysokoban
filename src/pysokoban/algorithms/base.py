@@ -59,10 +59,19 @@ class SearchResult:
     actions: List[Action]
     states: List[SokobanState]
     metrics: SearchMetrics
+    explored_tiles: Set[Coord] = field(default_factory=set)
 
     @classmethod
-    def failure(cls, metrics: SearchMetrics) -> SearchResult:
-        return cls(solved=False, actions=[], states=[], metrics=metrics)
+    def failure(
+        cls, metrics: SearchMetrics, explored_tiles: Optional[Set[Coord]] = None
+    ) -> SearchResult:
+        return cls(
+            solved=False,
+            actions=[],
+            states=[],
+            metrics=metrics,
+            explored_tiles=explored_tiles or set(),
+        )
 
 
 @dataclass
